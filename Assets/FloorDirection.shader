@@ -31,6 +31,7 @@
             float  _AgentPosX;
             float  _AgentPosY;
             float _Radius;
+            float3 _aLocs[50];
 
             struct appdata
             {
@@ -59,20 +60,22 @@
                 //fixed4 c = tex2D(_MainTex,i.uv);
                 float x = IN.worldPos.x;
                 float y = IN.worldPos.y;
-                float3 c = { _AgentPosX, 0,_AgentPosY };
-                float dis = distance(c, IN.worldPos);//sqrt(pow((_AgentPosX - x), 2) + pow((_AgentPosY- y), 2));
-                if (dis < _Radius) { 
-                    float innerRadius = (_ComponentWidth * _Radius - _BoundWidth) / _ComponentWidth; //0.1 == radis
-                    if (dis > innerRadius) {
-                        o.Albedo = _BoundColor;
-                        //c.a = c.a*antialias(_BoundWidth, dis, innerRadius);
+                o.Albedo = tex2D(_MainTex, IN.uv_MainTex).rgb;
+                for(int i = 0; i < 50;i++){
+                    float3 c = _aLocs[i];//{ _AgentPosX, 0,_AgentPosY };
+                    if (c.y == 0) continue;
+                    c.y = 0;
+                    float dis = distance(c, IN.worldPos);//sqrt(pow((_AgentPosX - x), 2) + pow((_AgentPosY- y), 2));
+                    if (dis < _Radius) { 
+                        float innerRadius = (_ComponentWidth * _Radius - _BoundWidth) / _ComponentWidth; //0.1 == radis
+                        if (dis > innerRadius) {
+                            o.Albedo = _BoundColor;
+                            //c.a = c.a*antialias(_BoundWidth, dis, innerRadius);
+                        }
+                        else {
+                            o.Albedo = _BgColor;
+                        }
                     }
-                    else {
-                        o.Albedo = _BgColor;
-                    }
-                }
-                else {
-                    o.Albedo = tex2D(_MainTex, IN.uv_MainTex).rgb;
                 }
             }
             ENDCG
