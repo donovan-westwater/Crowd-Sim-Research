@@ -10,6 +10,7 @@ public class AgentVisualizer : MonoBehaviour
      * Each update, read the values from the frame text, and then assign them to agents in the array
      * When there are no more files to read, stop the simulation
      * */
+    public Material circle;
     void Start()
     {
         
@@ -18,6 +19,7 @@ public class AgentVisualizer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        circle.SetFloat("_AgentPosX", this.transform.position.x);
+        circle.SetFloat("_AgentPosY", this.transform.position.z);
     }
 }
