@@ -32,27 +32,29 @@ public class AgentPlayer : MonoBehaviour
     void Update()
     {
         timer += Time.deltaTime;
-        if (timer > 0.5f)
+        if (timer > 0.05f)
         {
             timer = 0;
         
-            string name = "frames/frame"+count+".txt";
-            if (!File.Exists(name)) return;
-            lines = File.ReadAllLines(name);
-            for (int i = 0; i < amount; i++)
+            string filename = "frames/frame"+count+".txt";
+            if (File.Exists(filename))
             {
-                if (i >= 50) continue;
-                string[] cords = lines[i].Split('|');
-                positions[i] = new Vector3(float.Parse(cords[0]), 0, float.Parse(cords[1]));
-                if (!agents[i])
+                lines = File.ReadAllLines(filename);
+                for (int i = 0; i < amount; i++)
                 {
-                    agents[i] = Instantiate(prefab);
-                    agents[i].GetComponent<AgentVisualizer>().id = i;
-                }
-                agents[i].transform.position = positions[i];
+                    if (i >= 50) continue;
+                    string[] cords = lines[i].Split('|');
+                    positions[i] = new Vector3(float.Parse(cords[0]), 2, float.Parse(cords[1]));
+                    if (!agents[i])
+                    {
+                        agents[i] = Instantiate(prefab);
+                        agents[i].GetComponent<AgentVisualizer>().id = i;
+                    }
+                    agents[i].transform.position = positions[i];
 
+                }
+                count++;
             }
-            count++;
         }
     }
 }
