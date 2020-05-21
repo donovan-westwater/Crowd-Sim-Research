@@ -8,7 +8,7 @@ public class AgentVisualizer : MonoBehaviour
    
     public Material circle;
     public int id;
-    static Vector4[] array = new Vector4[50];
+    static Vector4[] array = new Vector4[300];
     void Start()
     {
         

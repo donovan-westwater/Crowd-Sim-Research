@@ -44,7 +44,7 @@ public class AgentPlayer : MonoBehaviour
                 lines = File.ReadAllLines(filename);
                 for (int i = 0; i < amount; i++)
                 {
-                    if (i >= 50) continue;
+                    //if (i >= 50) continue;
                     string[] cords = lines[i].Split('|');
                     positions[i] = new Vector3(float.Parse(cords[0]), 2, float.Parse(cords[1]));
                     if (!agents[i])

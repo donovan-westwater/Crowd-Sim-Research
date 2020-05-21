@@ -31,7 +31,7 @@
             float  _AgentPosX;
             float  _AgentPosY;
             float _Radius;
-            float3 _aLocs[50];
+            float3 _aLocs[300];
 
             struct appdata
             {
@@ -61,9 +61,9 @@
                 float x = IN.worldPos.x;
                 float y = IN.worldPos.y;
                 o.Albedo = tex2D(_MainTex, IN.uv_MainTex).rgb;
-                for(int i = 0; i < 50;i++){
+                for(int i = 0; i < 1000;i++){
                     float3 c = _aLocs[i];//{ _AgentPosX, 0,_AgentPosY };
-                    if (c.y == 0) continue;
+                    if (c.y == 0) break;
                     c.y = 0;
                     float dis = distance(c, IN.worldPos);//sqrt(pow((_AgentPosX - x), 2) + pow((_AgentPosY- y), 2));
                     if (dis < _Radius) { 
