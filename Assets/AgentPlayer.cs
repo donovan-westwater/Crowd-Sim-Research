@@ -21,6 +21,7 @@ public class AgentPlayer : MonoBehaviour
     float timer = 0;
     string[] lines;
     GameObject[] agents;
+    bool playmode = true;
     public GameObject prefab;
     void Start()
     {
@@ -33,12 +34,41 @@ public class AgentPlayer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        timer += Time.deltaTime;
-        if (timer > 0.05f)
-        {
-            timer = 0;
+        if (playmode) { 
+            timer += Time.deltaTime;
+            if (Input.GetKeyDown(KeyCode.Space)) playmode = false;
+            if (timer > 0.05f)
+            {
+                timer = 0;
         
-            string filename = "frames/frame"+count+".txt";
+                string filename = "frames/frame"+count+".txt";
+                if (File.Exists(filename))
+                {
+                    lines = File.ReadAllLines(filename);
+                    for (int i = 0; i < amount; i++)
+                    {
+                        //if (i >= 50) continue;
+                        string[] cords = lines[i].Split('|');
+                        positions[i] = new Vector3(float.Parse(cords[0]), 2, float.Parse(cords[1]));
+                        if (!agents[i])
+                        {
+                            agents[i] = Instantiate(prefab);
+                            agents[i].GetComponent<AgentVisualizer>().id = i;
+                        }
+                        agents[i].transform.position = positions[i];
+
+                    }
+                    count++;
+                }
+            }
+        }
+        else //Code to rewind the simulation and look at previous postions of agents
+        {
+            if (Input.GetKey(KeyCode.LeftArrow)) count--;
+            if (Input.GetKey(KeyCode.RightArrow)) count++;
+            if (Input.GetKeyDown(KeyCode.Space)) playmode = true;
+            if (count < 0) count = 0;
+            string filename = "frames/frame" + count + ".txt";
             if (File.Exists(filename))
             {
                 lines = File.ReadAllLines(filename);
@@ -54,8 +84,7 @@ public class AgentPlayer : MonoBehaviour
                     }
                     agents[i].transform.position = positions[i];
 
-                }
-                count++;
+                }  
             }
         }
     }
