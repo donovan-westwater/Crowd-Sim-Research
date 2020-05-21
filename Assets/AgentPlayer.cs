@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class AgentPlayer : MonoBehaviour
 {
@@ -22,18 +23,26 @@ public class AgentPlayer : MonoBehaviour
     string[] lines;
     GameObject[] agents;
     bool playmode = true;
+    int fnum = 0;
     public GameObject prefab;
+    public Text display;
+    public Slider rewind;
     void Start()
     {
+        fnum = Directory.GetFiles("./frames").Length;
         lines = File.ReadAllLines("frames/frame1.txt");
         amount = lines.Length;
         positions = new Vector3[amount];
         agents = new GameObject[amount];
+        rewind.maxValue = fnum;
+        display.text = "Current frame of simulation: " + count;
     }
 
     // Update is called once per frame
     void Update()
     {
+        display.text = "Current frame of simulation: " + count;
+        rewind.value = count;
         if (playmode) { 
             timer += Time.deltaTime;
             if (Input.GetKeyDown(KeyCode.Space)) playmode = false;
@@ -64,10 +73,13 @@ public class AgentPlayer : MonoBehaviour
         }
         else //Code to rewind the simulation and look at previous postions of agents
         {
+           // display.text = "Current frame of simulation: " + count;
+            //rewind.value = count;
             if (Input.GetKey(KeyCode.LeftArrow)) count--;
             if (Input.GetKey(KeyCode.RightArrow)) count++;
             if (Input.GetKeyDown(KeyCode.Space)) playmode = true;
-            if (count < 0) count = 0;
+            if (count < 1) count = 1;
+            if (count > fnum) count = fnum;
             string filename = "frames/frame" + count + ".txt";
             if (File.Exists(filename))
             {
@@ -86,6 +98,7 @@ public class AgentPlayer : MonoBehaviour
 
                 }  
             }
+            
         }
     }
 }
