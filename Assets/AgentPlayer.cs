@@ -42,8 +42,9 @@ public class AgentPlayer : MonoBehaviour
     void Update()
     {
         display.text = "Current frame of simulation: " + count;
-        rewind.value = count;
-        if (playmode) { 
+        //rewind.value = count;
+        if (playmode) {
+            rewind.value = count;
             timer += Time.deltaTime;
             if (Input.GetKeyDown(KeyCode.Space)) playmode = false;
             if (timer > 0.05f)
@@ -73,8 +74,13 @@ public class AgentPlayer : MonoBehaviour
         }
         else //Code to rewind the simulation and look at previous postions of agents
         {
-           // display.text = "Current frame of simulation: " + count;
+            // display.text = "Current frame of simulation: " + count;
             //rewind.value = count;
+            if (!Input.GetKey(KeyCode.LeftArrow) && !Input.GetKey(KeyCode.RightArrow) && !Input.GetKeyDown(KeyCode.Space))
+            {
+                count = (int)rewind.value;
+            }
+            else rewind.value = count;
             if (Input.GetKey(KeyCode.LeftArrow)) count--;
             if (Input.GetKey(KeyCode.RightArrow)) count++;
             if (Input.GetKeyDown(KeyCode.Space)) playmode = true;
