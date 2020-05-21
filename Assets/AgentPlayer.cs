@@ -6,10 +6,12 @@ using UnityEngine;
 public class AgentPlayer : MonoBehaviour
 {
     // Start is called before the first frame update
-    /*TODO:
-    * Create an array of agents based on the amount of lines found in the first text file
-    * Each update, read the values from the frame text, and then assign them to agents in the array
-    * When there are no more files to read, stop the simulation
+    /*
+     * What this does: Take record made in the crowd sim side of things and play it out in unity
+     * Broken down into steps:
+    *       * Create an array of agents based on the amount of lines found in the first text file
+    *       * Each update, read the values from the frame text, and then assign them to agents in the array
+    *       * When there are no more files to read, stop the simulation
     * */
     Vector3[] positions;
     float tempx = -1;
