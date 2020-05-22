@@ -10,8 +10,6 @@ cc -o opengl_mock openglglut.cpp -I/opt/local/include -lglfw -framework Cocoa -f
 //#define _DEBUG_LT_PRED(pred, x, y)    pred(x, y)
 
 #include <stdlib.h>
-#include <iostream>
-#include <fstream>
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
@@ -41,7 +39,7 @@ using namespace std;
 #define PI 3.14159265f
 #define ARADIS 10
 #define TIME_STEP 0.5 // was 0.5
-#define NUMOFAGENTS 300 //Was 300
+#define NUMOFAGENTS 4 //Was 300
 //bool circle = false;
 //bool quad = false;
 //bool mouse = false;
@@ -67,7 +65,6 @@ bool fps = false;
 void draw_circle(float x, float  y, float z);
 void step(int i);
 void hashStep(int i);
-void storLocs();
 
 typedef struct Circle {
     int id; //Used for spatial hash
@@ -86,8 +83,8 @@ typedef struct Circle {
     void (*stepF)(int i) { step };
 };
 Circle manager[NUMOFAGENTS] = { 0 };
-// SPATIAL HASH Currently is making clones of the cirlces instead of having them as pointers to a circle!
-map<string, std::vector<Circle>> spatialHash;
+// SPATIAL HASH 
+map<string, std::vector<Circle *>> spatialHash;
 #define CELL_SIZE 50
 void initGL() {
     /*
@@ -137,12 +134,12 @@ void initGL() {
     if (shash) {
         if (!favoid) {
             for (int i = 0; i < NUMOFAGENTS; i++) {
-                manager[i].x = (float)(rand() % 1000) - 500;
-                manager[i].y = (float)(rand() % 1000) - 500;
-                manager[i].dirX = (float)(rand() % 10) - 5;
-                manager[i].dirY = (float)(rand() % 10) - 5;
-                manager[i].dir_goal_x = (float)(rand() % 10) - 5;
-                manager[i].dir_goal_y = (float)(rand() % 10) - 5;
+                manager[i].x =  (float)(rand() % 1000) - 500; //i % 2 == 0 ? -500 + i * 20 : -500 + i * 20;
+                manager[i].y = (float)(rand() % 1000) - 500; //i % 2 == 0 ? -400:400; 
+                manager[i].dirX = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
+                manager[i].dirY = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
+                manager[i].dir_goal_x = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
+                manager[i].dir_goal_y = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
                 manager[i].stepF = hashStep;
                 manager[i].id = i;
                 manager[i].cell = "";
@@ -180,9 +177,12 @@ void initGL() {
             manager[i].cell = key;
             //spatialHash[key].push_back(manager[i]);
             int adjCount = 0;
+            string prev[4];
+            bool used = false;
             for (int j = -1; j <= 1; j++) {
                 for (int k = -1; k <= 1; k++) {
                     if (j == 0 || k == 0) continue;
+                    used = false;
                     int adjX = (int)((manager[i].x + j*ARADIS) / CELL_SIZE) * CELL_SIZE;
                     int adjY = (int)((manager[i].y + k*ARADIS) / CELL_SIZE) * CELL_SIZE;
                     if (adjX == X && adjY == Y) {
@@ -193,16 +193,24 @@ void initGL() {
                     key += to_string(adjX);
                     key += ",";
                     key += to_string(adjY);
+                    for (string s : prev) {
+                        if(s.compare(key) == 0) used = true;
+                    }
+                    if (used) {
+                        adjCount += 1;
+                        continue;
+                    }
                     manager[i].adjcells[adjCount] = key;
+                    prev[adjCount] = key;
                     //spatialHash[key].push_back(manager[i]);
                     adjCount += 1;
                 }
             }
-            spatialHash[manager[i].cell].push_back(manager[i]);
-            if(manager[i].adjcells[0].compare("") !=0) spatialHash[manager[i].adjcells[0]].push_back(manager[i]);
-            if (manager[i].adjcells[1].compare("") != 0) spatialHash[manager[i].adjcells[1]].push_back(manager[i]);
-            if (manager[i].adjcells[2].compare("") != 0) spatialHash[manager[i].adjcells[2]].push_back(manager[i]);
-            if (manager[i].adjcells[3].compare("") != 0) spatialHash[manager[i].adjcells[3]].push_back(manager[i]);
+            spatialHash[manager[i].cell].push_back(&manager[i]);
+            if(manager[i].adjcells[0].compare("") !=0) spatialHash[manager[i].adjcells[0]].push_back(&manager[i]);
+            if (manager[i].adjcells[1].compare("") != 0) spatialHash[manager[i].adjcells[1]].push_back(&manager[i]);
+            if (manager[i].adjcells[2].compare("") != 0) spatialHash[manager[i].adjcells[2]].push_back(&manager[i]);
+            if (manager[i].adjcells[3].compare("") != 0) spatialHash[manager[i].adjcells[3]].push_back(&manager[i]);
             /*
             if (minX != X && minY != Y) {
                 key = "";
@@ -352,7 +360,23 @@ void draw_quad(float x, float y, float z)
     glEnd();
     */
 }
+void draw_grid() {
+    for (int x = -500; x < 500; x += CELL_SIZE) {
+        glBegin(GL_LINES);
+        glColor3f(0.0, 0.807, 0.2);
+        glVertex2f(x, -500);
+        glVertex2f(x, 500);
+        glEnd();
+    }
+    for (int y = -500; y < 500; y += CELL_SIZE) {
+        glBegin(GL_LINES);
+        glColor3f(0.2, 0.807, 0.2);
+        glVertex2f(-500,y);
+        glVertex2f(500, y);
+        glEnd();
+    }
 
+}
 // check https://www.khronos.org/opengl/wiki/Viewing_and_Transformations#How_do_I_implement_a_zoom_operation.3F
 void camera(float diam, float c_x, float c_y) {
     float zNear = 0.0;
@@ -425,19 +449,20 @@ void display() {
 
 
     }
+    draw_grid();
     glFlush();  // Render now
 }
 float distance(float x1,float y1,float  x2,float y2) {
     return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
-bool willCollide(Circle a, Circle b) {
+bool willCollide(Circle *a, Circle *b) {
     float radi = 2 * ARADIS;
-    float wX = b.x - a.x;
-    float wY = b.y - a.y;
+    float wX = b->x - a->x;
+    float wY = b->y - a->y;
     float c = (wX * wX + wY * wY) - radi*radi;
     if (c < 0) return true;
-    float vX = a.dirX - b.dirX;
-    float vY = a.dirY - b.dirY;
+    float vX = a->dirX - b->dirX;
+    float vY = a->dirY - b->dirY;
     float dotV = vX * vX + vY * vY;
     float dotWV = wX * vX + wY * vY;
     float discr = dotWV * dotWV - dotV * c;
@@ -468,7 +493,7 @@ void step(int i) {
         if (i == j) continue;
         float dist = distance(manager[i].x, manager[i].y, manager[j].x, manager[j].y);
         if (dist > 0 && dist < d_h) {
-            if (!willCollide(manager[i], manager[j])) continue;
+            if (!willCollide(&manager[i], &manager[j])) continue;
             float d_ab = dist - 2 * ARADIS > 0.001 ? dist - 2 * ARADIS : 0.001;
             float k = d_h - d_ab > 0 ? d_h - d_ab : 0;
             float x_ab = (manager[i].x - manager[j].x) / dist;
@@ -511,7 +536,7 @@ void hashStep(int i) {
     float v_x = manager[i].dirX;
     float v_y = manager[i].dirY;
     const float zeta = 1.0023;
-    const float max_force = 0.55; //0.15
+    const float max_force = 1.55; //0.15
     const float max_speed = 1.5;
     const float timeStep = TIME_STEP;
     float f_goal_x = (manager[i].dir_goal_x - v_x) / zeta;
@@ -532,15 +557,15 @@ void hashStep(int i) {
     //list.reserve(sizeof(Circle*) * 300);
     
     
-    vector<Circle>* list = &spatialHash[key];   //This was the oringal list code
+    vector<Circle *>* list = &spatialHash[key];   //This was the oringal list code
     //Running through circles in the current hash
     for (int j = 0; j < list->size();j++) {
         compteCount += 1;
-        Circle* c = &(*list)[j];
+        Circle* c = (*list)[j];//&(*list)[j];
         if (manager[i].id == c->id) continue; //manager[i].x == c->x && manager[i].y == c->y
         float dist = distance(manager[i].x, manager[i].y, c->x, c->y);
         if (dist > 0 && dist < d_h) {
-            if (!willCollide(manager[i], *c)) continue;
+            //if (!willCollide(&manager[i], c)) continue;
             float d_ab = dist - 2 * ARADIS > 0.001 ? dist - 2 * ARADIS : 0.001;
             float k = d_h - d_ab > 0 ? d_h - d_ab : 0;
             float x_ab = (manager[i].x - c->x) / dist;
@@ -604,6 +629,8 @@ void hashStep(int i) {
     //Compare Old Min and Max with new max and min, and then adjust hash positions if overlapping with new cells
     int adjCount = 0;
     string oldCells[4];
+    string prev[4];
+    bool used = false;
     oldCells[0] = manager[i].adjcells[0];
     oldCells[1] = manager[i].adjcells[1];
     oldCells[2] = manager[i].adjcells[2];
@@ -612,6 +639,7 @@ void hashStep(int i) {
         for(int z = -1;z<=1;z++){
             if (j == 0) continue;
             if (z == 0) break;
+            used = false;
             int adjX = (int)((manager[i].x + j * ARADIS) / CELL_SIZE) * CELL_SIZE;
             int adjY = (int)((manager[i].y + z * ARADIS) / CELL_SIZE) * CELL_SIZE;
             
@@ -619,25 +647,29 @@ void hashStep(int i) {
             key += to_string(adjX);
             key += ",";
             key += to_string(adjY);
-            if (key.compare(manager[i].adjcells[adjCount]) == 0) {
+            for (string s : prev) {
+                if (s.compare(prev[adjCount]) == 0) used = true;
+            }
+            if (key.compare(manager[i].adjcells[adjCount]) == 0 || used) {
                 adjCount += 1;
                 continue;
             }
-            vector<Circle>* check = &spatialHash[key];
+            vector<Circle *>* check = &spatialHash[key];
             for (int k = 0; k < check->size(); k++) {
-                if ((*check)[k].id == manager[i].id) {
+                if ((*(*check)[k]).id == manager[i].id) {
                     spatialHash[key].erase(check->begin() + k);
                     break;
                 }
             }
             manager[i].adjcells[adjCount] = key;
+            prev[adjCount] = key;
             //spatialHash[key].push_back(manager[i]);
             adjCount += 1;
         }
-        if(oldCells[0].compare(manager[i].adjcells[0]) != 0) spatialHash[manager[i].adjcells[0]].push_back(manager[i]);
-        if(oldCells[1].compare(manager[i].adjcells[1]) != 0) spatialHash[manager[i].adjcells[1]].push_back(manager[i]);
-        if(oldCells[2].compare(manager[i].adjcells[2]) != 0) spatialHash[manager[i].adjcells[2]].push_back(manager[i]);
-        if(oldCells[3].compare(manager[i].adjcells[3]) != 0) spatialHash[manager[i].adjcells[3]].push_back(manager[i]);
+        if(oldCells[0].compare(manager[i].adjcells[0]) != 0) spatialHash[manager[i].adjcells[0]].push_back(&manager[i]);
+        if(oldCells[1].compare(manager[i].adjcells[1]) != 0) spatialHash[manager[i].adjcells[1]].push_back(&manager[i]);
+        if(oldCells[2].compare(manager[i].adjcells[2]) != 0) spatialHash[manager[i].adjcells[2]].push_back(&manager[i]);
+        if(oldCells[3].compare(manager[i].adjcells[3]) != 0) spatialHash[manager[i].adjcells[3]].push_back(&manager[i]);
     }
         key = "";
         key += to_string(X);
@@ -645,16 +677,16 @@ void hashStep(int i) {
         key += to_string(Y);
         if (key.compare(manager[i].cell) != 0) {
             //spatialHash[manager[i].cell].remove(manager[i]);   use for loop to look for value to delete!
-            vector<Circle>* search = &spatialHash[manager[i].cell];
+            vector<Circle *>* search = &spatialHash[manager[i].cell];
             for (int j = 0; j < search->size(); j++) {
                 //compteCount += 1;
-                if ((*search)[j].id == manager[i].id) {
+                if ((*(*search)[j]).id == manager[i].id) {
                     spatialHash[manager[i].cell].erase(search->begin() + j);
                     break;
                 }
             }
             manager[i].cell = key;
-        spatialHash[manager[i].cell].push_back(manager[i]);
+        spatialHash[manager[i].cell].push_back(&manager[i]);
     }
     /*
     for (int j = -1; j <= 1; j++) {
@@ -717,78 +749,7 @@ void update(int value) {
         //setup loop based on cell amount and cell size, go through each cell A) see what agents are there and B) check what collsions exist 
         //TODO: Create add agent function
         if (shash) {
-            //Updates and populates the hash [This is super expenseive, need a more modular system]
-            /*
-            spatialHash.clear();
-            for (int i = 0; i < NUMOFAGENTS; i++) {
-                if(manager[i].isEmpty) break;
-                int X = round(manager[i].x / CELL_SIZE) * CELL_SIZE;
-                int Y = round(manager[i].y / CELL_SIZE) * CELL_SIZE;
-
-                int minX = round((manager[i].x - ARADIS) / CELL_SIZE) * CELL_SIZE;
-                int minY = round((manager[i].y - ARADIS) / CELL_SIZE) * CELL_SIZE;
-                int maxX = round((manager[i].x + ARADIS) / CELL_SIZE)* CELL_SIZE;
-                int maxY = round((manager[i].y + ARADIS) / CELL_SIZE) * CELL_SIZE;
-                string key = "";
-                key += to_string(X);
-                key += ",";
-                key += to_string(Y);
-                spatialHash[key].push_back(manager[i]);
-                
-                if (minX != X || minY != Y) {
-                    key = "";
-                    key += to_string(minX);
-                    key += ",";
-                    key += to_string(minY);
-                    spatialHash[key].push_back(manager[i]);
-                }
-                if (maxX != X || maxY != Y) {
-                    key = "";
-                    key += to_string(maxX);
-                    key += ",";
-                    key += to_string(maxY);
-                    spatialHash[key].push_back(manager[i]);
-                }
-                
-            }
-            */
-            //Run through custom step function! [BROKEN!! You shouldnt go through all agents like this, you should go by cell, grab the list and then call your step fucntions
-           /*
-            for (int x = round(-500/CELL_SIZE)*CELL_SIZE; x <= round(500 / CELL_SIZE) * CELL_SIZE; x += CELL_SIZE) {
-                for (int y = round(-500 / CELL_SIZE) * CELL_SIZE; y <= round(500 / CELL_SIZE) * CELL_SIZE; y += CELL_SIZE) {
-                    //float X = round(x / CELL_SIZE) * CELL_SIZE;
-                    //float Y = round(y / CELL_SIZE) * CELL_SIZE;
-                    string key = "";
-                    key += to_string(x);
-                    key += ",";
-                    key += to_string(y);
-                    //int test = spatialHash.count(key);
-                   // if (spatialHash[key].size() == 0) continue;
-                    vector<Circle> *listCheck = &spatialHash[key];
-                    for (int j = 0; j < listCheck->size();j++) {
-                        (*listCheck)[j].stepF((*listCheck)[j].id);
-                    }
-                    
-                    int curSize = spatialHash[key].size();
-                    while (listCheck != spatialHash[key].end()) {
-                        listCheck->stepF(listCheck->id);
-                        if (listCheck == spatialHash[key].end()) break;
-                        ++listCheck;
-                       // if (curSize != spatialHash[key].size()) {
-                       //     listCheck = spatialHash[key].begin();
-                       // }
-                    }
-                    
-                }
-            }
-            */
-            /*
-            for(pair<string,list<Circle>> element : spatialHash) {
-                for (Circle c : element.second) {
-                    c.stepF(c.id);
-                }
-            }
-            */
+          
             //Make sure agents are in bounds
             for (int i = 0; i < NUMOFAGENTS; i++) {
                 manager[i].stepF(i);
@@ -798,30 +759,10 @@ void update(int value) {
                 if (manager[i].y < -500) manager[i].y = 499;
             }
         }
-        storLocs();
         glutPostRedisplay(); // Inform GLUT that the display has changed
         glutTimerFunc(25, update, 0);//Call update after each 25 millisecond
 }
-/*
-Description: This fucntion writes down all the postions of the agents in the current frame
-Params: None
-Input: All the circles in the simulation
-Output: A file with each agents x and z cord written down (Unity is 3d so best to think of it as z)
-Needs: -A counter to keep track of frames
-       -A system of organzing and stor circle locations
-*/
-void storLocs() {
-    ofstream frame;
-    string strFrames = to_string((int)frames);
-    frame.open("frames/frame"  +strFrames +  ".txt");
-    for (int i = 0; i < NUMOFAGENTS; i++) {
-        string strX = to_string(manager[i].x);
-        string strY = to_string(manager[i].y);
-        frame << strX << "|" << strY << "\n";
-    }
-    frame.close();
 
-}
 /* Main function: GLUT runs as a console application starting at main()  */
 int main(int argc, char** argv) {
     //Add check for options here
