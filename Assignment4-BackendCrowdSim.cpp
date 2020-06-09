@@ -18,6 +18,8 @@ cc -o opengl_mock openglglut.cpp -I/opt/local/include -lglfw -framework Cocoa -f
 #include <string>
 #include <iterator>
 #include <algorithm>
+#include <iostream>
+#include <fstream>
 //#include <Windows.h>
 
 #ifdef __APPLE__
@@ -67,10 +69,11 @@ void draw_circle(float x, float  y, float z);
 void step(int i);
 void hashStep(int i);
 
+typedef pair<int, int> coord; //For hashmap
 typedef struct Circle {
     int id; //Used for spatial hash
-    string cell; //Used for Spatial Hash
-    string adjcells[4]; //Used for Spatial Hash
+    coord cell = {-555, -555 }; //Used for Spatial Hash //was oringaly string
+    coord adjcells[4] = { {-555, -555} ,{-555, -555} ,{-555, -555} ,{-555, -555} }; //Used for Spatial Hash //Was oringally string[4]
     GLfloat x;
     GLfloat y;
     GLfloat z = 0;
@@ -85,9 +88,27 @@ typedef struct Circle {
 };
 Circle manager[NUMOFAGENTS] = { 0 };
 // SPATIAL HASH 
-unordered_map<string, std::vector<Circle *>> spatialHash;
+/*
+struct HASH { //Needs to fix
+    size_t operator()(const coord x)const {
+        return hash<long long>()(((long long)x.first) ^ (((long long)x.second) << 32));
+    }
+};
+unordered_map<coord, std::vector<Circle *>,HASH> spatialHash; //int[] was orginally a string
 unordered_map<int, string> intToStr;
-#define CELL_SIZE 50
+*/
+#define CELL_SIZE 25
+#define BucketSize 20
+#define width (500 - -500)/CELL_SIZE
+int spatialHash[width * width][BucketSize];
+//Hash not correct atm WIP Create a HashSize that is width*width+width (to include the cell for 500)
+int hashFun(float x, float y) {
+    int xpart = (int)(x / CELL_SIZE) * CELL_SIZE;
+    int ypart = (int)(y / CELL_SIZE) * CELL_SIZE;
+    int out = (((xpart+500) / CELL_SIZE) +  ((ypart+500) / CELL_SIZE) * width);
+    return out; 
+}
+
 void initGL() {
     /*
     if (mouse) {
@@ -134,16 +155,7 @@ void initGL() {
         lasttime = time(NULL);
     }
     if (shash) {
-        /*
-        for(int x = -500; x <= 500; x+=CELL_SIZE) {
-            for (int y = -500; y <= 500; y += CELL_SIZE) {
-                spatialHash[to_string(x) + "," + to_string(y)].reserve(10 * sizeof(Circle*));
-            }
-        }
-        */
-        for (int x = -500; x <= 500; x += CELL_SIZE) {
-            intToStr[x] = to_string(x);
-        }
+        
         if (!favoid) {
             for (int i = 0; i < NUMOFAGENTS; i++) {
                 manager[i].x =  (float)(rand() % 1000) - 500; //i % 2 == 0 ? -500 + i * 20 : -500 + i * 20;
@@ -156,11 +168,15 @@ void initGL() {
                 if (abs(manager[i].dir_goal_y) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_y = -1 : manager[i].dir_goal_y = 1;
                 manager[i].stepF = hashStep;
                 manager[i].id = i;
-                manager[i].cell = "";
-                manager[i].adjcells[0] = "";
-                manager[i].adjcells[1] = "";
-                manager[i].adjcells[2] = "";
-                manager[i].adjcells[3] = "";
+                if (manager[i].x > 500) manager[i].x = -499;
+                if (manager[i].x < -500) manager[i].x = 499;
+                if (manager[i].y > 500) manager[i].y = -499;
+                if (manager[i].y < -500) manager[i].y = 499;
+               // manager[i].cell = {NULL,NULL};
+               //manager[i].adjcells[0] = { NULL,NULL };
+               // manager[i].adjcells[1] = { NULL,NULL };
+               // manager[i].adjcells[2] = { NULL,NULL };
+               //manager[i].adjcells[3] = { NULL,NULL };
                 manager[i].isEmpty = false;
             }
         }
@@ -168,63 +184,79 @@ void initGL() {
             for (int i = 0; i < NUMOFAGENTS; i++) {
                 manager[i].stepF = hashStep;
                 manager[i].id = i;
-                manager[i].cell = "";
-                manager[i].adjcells[0] = "";
-                manager[i].adjcells[1] = "";
-                manager[i].adjcells[2] = "";
-                manager[i].adjcells[3] = "";
+               // manager[i].cell = { NULL,NULL };
+               // manager[i].adjcells[0] = { NULL,NULL };
+               // manager[i].adjcells[1] = { NULL,NULL };
+                //manager[i].adjcells[2] = { NULL,NULL };
+               // manager[i].adjcells[3] = { NULL,NULL };
             }
         }
+        memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
+        /*
         for (int i = 0; i < NUMOFAGENTS; i++) {
             if (manager[i].isEmpty) break;
-            int X = (int)(manager[i].x / CELL_SIZE) * CELL_SIZE;
-            int Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
-
+            //int X = (int)(manager[i].x / CELL_SIZE) * CELL_SIZE;
+            //int Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
             //int minX = (int)((manager[i].x - ARADIS) / CELL_SIZE) * CELL_SIZE;
             //int minY = (int)((manager[i].y - ARADIS) / CELL_SIZE) * CELL_SIZE;
             //int maxX = (int)((manager[i].x + ARADIS) / CELL_SIZE) * CELL_SIZE;
             //int maxY = (int)((manager[i].y + ARADIS) / CELL_SIZE) * CELL_SIZE;
-            string key = "";
-            key += to_string(X);
-            key += ",";
-            key += to_string(Y);
-            manager[i].cell = key;
+            //string key = "";
+            //key += to_string(X);
+            //key += ",";
+            //key += to_string(Y);
+            //manager[i].cell.first = X; //key;
+            //manager[i].cell.second = Y;
             //spatialHash[key].push_back(manager[i]);
+            int Index = hashFun(manager[i].x, manager[i].y);
+            for (int n = 0; n < BucketSize; n++) {
+                if (spatialHash[Index][n] == -1) {
+                    spatialHash[Index][n] = manager[i].id;
+                    break;
+                }
+            }
             int adjCount = 0;
-            string prev[4];
+            //string prev[4];
+            int prev[4] = { -1,-1,-1,-1 };
             bool used = false;
             for (int j = -1; j <= 1; j++) {
                 for (int k = -1; k <= 1; k++) {
                     if (j == 0 || k == 0) continue;
                     used = false;
-                    int adjX = (int)((manager[i].x + j*ARADIS) / CELL_SIZE) * CELL_SIZE;
-                    int adjY = (int)((manager[i].y + k*ARADIS) / CELL_SIZE) * CELL_SIZE;
-                    if (adjX == X && adjY == Y) {
-                        adjCount += 1;
-                        continue;
+                    Index = hashFun(manager[i].x + j*ARADIS, manager[i].y + k*ARADIS);
+                    for (int n = 0; n < 4; n++)
+                    {
+                        if(prev[n] == -1) break;
+                        if (prev[n] == Index) {
+                            adjCount += 1;
+                            used = true;
+                            break;
+                        }
                     }
-                    key = "";
-                    key += to_string(adjX);
-                    key += ",";
-                    key += to_string(adjY);
-                    for (string s : prev) {
-                        if(s.compare(key) == 0) used = true;
+                    if (used) continue;
+                    for (int n = 0; n < BucketSize; n++) {
+                        if (spatialHash[Index][n] == -1) {
+                            spatialHash[Index][n] = manager[i].id;
+                            prev[adjCount] = Index;
+                            //adjCount += 1;
+                            break;
+                        }
                     }
-                    if (used) {
-                        adjCount += 1;
-                        continue;
-                    }
-                    manager[i].adjcells[adjCount] = key;
-                    prev[adjCount] = key;
+                    
+                    
                     //spatialHash[key].push_back(manager[i]);
                     adjCount += 1;
                 }
             }
-            spatialHash[manager[i].cell].push_back(&manager[i]);
-            if(manager[i].adjcells[0].compare("") !=0) spatialHash[manager[i].adjcells[0]].push_back(&manager[i]);
-            if (manager[i].adjcells[1].compare("") != 0) spatialHash[manager[i].adjcells[1]].push_back(&manager[i]);
-            if (manager[i].adjcells[2].compare("") != 0) spatialHash[manager[i].adjcells[2]].push_back(&manager[i]);
-            if (manager[i].adjcells[3].compare("") != 0) spatialHash[manager[i].adjcells[3]].push_back(&manager[i]);
+            //spatialHash[manager[i].cell].push_back(&manager[i]);
+            //if(manager[i].adjcells[0].first != -555 || manager[i].adjcells[0].second != -555) spatialHash[manager[i].adjcells[0]].push_back(&manager[i]);
+            //if (manager[i].adjcells[1].first != -555 || manager[i].adjcells[1].second != -555) spatialHash[manager[i].adjcells[1]].push_back(&manager[i]);
+            //if (manager[i].adjcells[2].first != -555 || manager[i].adjcells[2].second != -555) spatialHash[manager[i].adjcells[2]].push_back(&manager[i]);
+           // if (manager[i].adjcells[3].first != -555 || manager[i].adjcells[3].second != -555) spatialHash[manager[i].adjcells[3]].push_back(&manager[i]);
+            //if(manager[i].adjcells[0].compare("") !=0) spatialHash[manager[i].adjcells[0]].push_back(&manager[i]);
+            //if (manager[i].adjcells[1].compare("") != 0) spatialHash[manager[i].adjcells[1]].push_back(&manager[i]);
+            //if (manager[i].adjcells[2].compare("") != 0) spatialHash[manager[i].adjcells[2]].push_back(&manager[i]);
+            //if (manager[i].adjcells[3].compare("") != 0) spatialHash[manager[i].adjcells[3]].push_back(&manager[i]);
             /*
             if (minX != X && minY != Y) {
                 key = "";
@@ -258,17 +290,18 @@ void initGL() {
                 manager[i].adjcells[0] = key;
                 spatialHash[key].push_back(manager[i]);
             }
-            */
+            
     }
         
-        /*
+        
         for (int i = 0; i < (1000 * 1000) / CELL_SIZE; i++) {
             //spatialHash[i].push_back(manager[i]);
             
         }
+        
         */
     }
-
+    
 }
 void mouseCordConvert(float x, float y, float* outX, float* outY) {
     GLint viewport[4];
@@ -454,7 +487,7 @@ void display() {
             updateFrames = 0;
         }
         char num[50];
-        sprintf_s(num, "FPS: %f", curFps);
+        sprintf_s(num, "AVG FPS: %f CUR FPS: %f", curFps,fps_avg); //Var nameare
         glRasterPos2d(0.0, 0.0);
         glColor3f(1, 0, 0);
         int len = (int)strlen(num);
@@ -508,7 +541,7 @@ void step(int i) {
         if (i == j) continue;
         float dist = distance(manager[i].x, manager[i].y, manager[j].x, manager[j].y);
         if (dist > 0 && dist < d_h) {
-            if (!willCollide(&manager[i], &manager[j])) continue;
+            //if (!willCollide(&manager[i], &manager[j])) continue;
             float d_ab = dist - 2 * ARADIS > 0.001 ? dist - 2 * ARADIS : 0.001;
             float k = d_h - d_ab > 0 ? d_h - d_ab : 0;
             float x_ab = (manager[i].x - manager[j].x) / dist;
@@ -517,8 +550,8 @@ void step(int i) {
             fAvoid_x += k * x_ab / d_ab;
             fAvoid_y += k * y_ab / d_ab;
             fAvoidCtr += 1;
-            }
         }
+    }
         if (fAvoidCtr > 0) {
             fAvoid_x = fAvoid_x / fAvoidCtr;
             fAvoid_y = fAvoid_y / fAvoidCtr;
@@ -562,58 +595,38 @@ void hashStep(int i) {
     float fAvoidCtr = 0;
     float interacting_agents = 0;
     //Getting lists of current and neighboring cells from hash
-    int X = (int)(manager[i].x / CELL_SIZE) * CELL_SIZE;
-    int Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
-    //string key = "          ";
-    string key;
-   //string const& reset = "";
-    key.reserve(20);
-    //key += to_string(X);
-   // key += ",";
-    //key += to_string(Y);
-    vector<Circle*>* list;
-    //vector<Circle *> list;
-    //list.reserve(sizeof(Circle*) * 300);
-    //vector<Circle *>* list = &spatialHash[key];   //This was the oringal list code
-    
-    /*
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-            if (x == 0 && y == 0)continue;
-            int adjx = X + x * CELL_SIZE;
-            int adjy = Y + y * CELL_SIZE;
-            if (adjx >= 500 || adjx <= -500) continue;
-            if (adjy >= 500 || adjy <= -500) continue;
-            key = "";
-            key += to_string(adjx);
-            key += ",";
-            key += to_string(adjy);
-            if (spatialHash.count(key) < 1) continue;
-            for (int i = 0; i < spatialHash[key].size(); i++) {
-                list.push_back(spatialHash[key][i]);
-            }
-        }
-    }
-    */
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
+    //int X = (int)(manager[i].x / CELL_SIZE) * CELL_SIZE;
+    //int Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
+    //int test = hashFun(manager[i].x, manager[i].x);
+    //int test2 = hashFun(X, Y);
+    int *list;
+    int hash;
+    for (int x = -2; x <= 2; x++) {
+        for (int y = -2; y <= 2; y++) {
             //if (x == 0 && y == 0)continue;
-            int adjx = X + x * CELL_SIZE;
-            int adjy = Y + y * CELL_SIZE;
+            int adjx = manager[i].x + x * CELL_SIZE;
+            int adjy = manager[i].y + y * CELL_SIZE;
             if (adjx >= 500 || adjx <= -500) continue;
             if (adjy >= 500 || adjy <= -500) continue;
-            key.clear();
+           // key.clear();
             //key += to_string(adjx);
-            key += intToStr[adjx];
-            key += ",";
-            key += intToStr[adjy];
+           // key += intToStr.at(adjx);///[adjx];
+           // key += ",";
+            //key += intToStr.at(adjy);//[adjy];
             //key += to_string(adjy);
-            if (spatialHash.count(key) < 1) continue;
-           list = &spatialHash[key];
+           // if (spatialHash.count(key) < 1) continue;
+            try {
+                hash = hashFun(adjx, adjy);
+                list = spatialHash[hashFun(adjx, adjy)];//&spatialHash[key];
+            }
+            catch (...) {
+                continue;
+            }
             //Running through circles in the current hash
-            for (int j = 0; j < list->size(); j++) {
+            for (int j = 0; j < BucketSize; j++) {
                 compteCount += 1;
-                Circle* c = (*list)[j];//(*list)[j];
+                if (list[j] == -1) break;
+                Circle* c = &manager[list[j]];//(*list)[j];
                 if (manager[i].id == c->id) continue; //manager[i].x == c->x && manager[i].y == c->y
                 float dist = distance(manager[i].x, manager[i].y, c->x, c->y);
                 if (dist > 0 && dist < d_h) {
@@ -628,211 +641,54 @@ void hashStep(int i) {
                     fAvoidCtr += 1;
                 }
             }
-            if (fAvoidCtr > 0) {
-                fAvoid_x = fAvoid_x / fAvoidCtr;
-                fAvoid_y = fAvoid_y / fAvoidCtr;
-            }
-            float forceSum_x = f_goal_x + fAvoid_x;
-            float forceSum_y = f_goal_y + fAvoid_y;
-            float fAvoid_Mag = sqrtf(forceSum_x * forceSum_x + forceSum_y * forceSum_y);
-
-            if (fAvoid_Mag > max_force) {
-                forceSum_x = max_force * forceSum_x / fAvoid_Mag;
-                forceSum_y = max_force * forceSum_y / fAvoid_Mag;
-            }
-
-            v_x += timeStep * forceSum_x;
-            v_y += timeStep * forceSum_y;
-            float speed = sqrtf(v_x * v_x + v_y * v_y);
-            if (speed > max_speed) {
-                v_x = max_speed * v_x / speed;
-                v_y = max_speed * v_y / speed;
-            }
         }
     }
-    float oldX = manager[i].x;
-    float oldY = manager[i].y;
+    if (fAvoidCtr > 0) {
+        fAvoid_x = fAvoid_x / fAvoidCtr;
+        fAvoid_y = fAvoid_y / fAvoidCtr;
+    }
+    float forceSum_x = f_goal_x + fAvoid_x;
+    float forceSum_y = f_goal_y + fAvoid_y;
+    float fAvoid_Mag = sqrtf(forceSum_x * forceSum_x + forceSum_y * forceSum_y);
+
+    if (fAvoid_Mag > max_force) {
+        forceSum_x = max_force * forceSum_x / fAvoid_Mag;
+        forceSum_y = max_force * forceSum_y / fAvoid_Mag;
+    }
+
+    v_x += timeStep * forceSum_x;
+    v_y += timeStep * forceSum_y;
+    float speed = sqrtf(v_x * v_x + v_y * v_y);
+    if (speed > max_speed) {
+        v_x = max_speed * v_x / speed;
+        v_y = max_speed * v_y / speed;
+    }
+        
+    
+    //float oldX = manager[i].x;
+    //float oldY = manager[i].y;
 
     manager[i].dirX = v_x;
     manager[i].dirY = v_y;
     manager[i].x += timeStep * v_x;
     manager[i].y += timeStep * v_y;
     //Updates circles location in the hash [Double check that its working properly!]
-    X = (int)(manager[i].x / CELL_SIZE) * CELL_SIZE;
-    Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
+    //X = (int)(manager[i].x / CELL_SIZE) * CELL_SIZE;
+   // Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
     
-    /*
-    key = "";
-    key += to_string(X);
-    key += ",";
-    key += to_string(Y);
-    if (key.compare(manager[i].cell) != 0) {
-        //spatialHash[manager[i].cell].remove(manager[i]);   use for loop to look for value to delete!
-        vector<Circle>* search = &spatialHash[manager[i].cell];
-        for (int j = 0; j < search->size();j++) {
-            //compteCount += 1;
-            if ((*search)[j].id == manager[i].id) {
-                spatialHash[manager[i].cell].erase(search->begin() + j);
-                break;
-            }
-        }
-        manager[i].cell = key;
-        //spatialHash[manager[i].cell].push_back(manager[i]);
+    
+}
+void storLocs() {
+    ofstream frame;
+    string strFrames = to_string((int)frames);
+    frame.open("frames/frame" + strFrames + ".txt");
+    for (int i = 0; i < NUMOFAGENTS; i++) {
+        string strX = to_string(manager[i].x);
+        string strY = to_string(manager[i].y);
+        frame << strX << "|" << strY << "\n";
     }
-    */
-    //PROBLEM: appears the sim is falling to properly delete old adjcent cells (APPEARS AT LOOPCOUNT 96)
-    key.clear();
-    key += intToStr[X];
-    key += ",";
-    key += intToStr[Y];
-    bool movedCell = false;
-    int size = spatialHash.size();
-    if (key.compare(manager[i].cell) != 0) {
-        movedCell = true;
-        //Delete agent from old cell
-        vector<Circle*>* search = &spatialHash[manager[i].cell];
-        for (int j = 0; j < search->size(); j++) {
-            if ((*(*search)[j]).id == manager[i].id) {
-                spatialHash[manager[i].cell].erase(search->begin() + j);
-                break;
-            } 
-        }
-        //Remove new key from adj cells if it is in there
-        for (int n = 0; n < 4; n++) {
-            if (key.compare(manager[i].adjcells[n]) == 0) {
-                manager[i].adjcells[n] = "";
-            }
-        }
+    frame.close();
 
-        manager[i].cell = key;
-        //check to see if agent is already in cell
-        search = &spatialHash[manager[i].cell];
-        bool inCell = false;
-        for (int j = 0; j < search->size(); j++) {
-            if ((*(*search)[j]).id == manager[i].id) {
-                inCell = true;
-            }
-        }
-        if(!inCell) spatialHash[manager[i].cell].push_back(&manager[i]);
-    }
-    size = spatialHash.size();
-
-    //Compare Old Min and Max with new max and min, and then adjust hash positions if overlapping with new cells
-    int adjCount = 0;
-    vector<Circle*>* check;
-    bool reset = false;
-    //This looks though adject cells to see if they are different than the current ones. if they are, add the agent to thouse regions
-    //1. Get key to adjcent region 2. Check if key is already in adjcells, if not, replace, if so ignore and continue 3.
-    for (int j = -1; j <= 1; j++) {
-        for(int z = -1;z<=1;z++){
-            if (j == 0) continue;
-            if (z == 0) continue;
-            size = spatialHash.size();
-            int adjX = (int)((manager[i].x + j * ARADIS) / CELL_SIZE) * CELL_SIZE;
-            int adjY = (int)((manager[i].y + z * ARADIS) / CELL_SIZE) * CELL_SIZE;
-           
-            key.clear();
-            key += intToStr[adjX];
-            key += ",";
-            key += intToStr[adjY];
-            //Serach to see if the key is already in a cell, if it is then ignore it and look at the next cell
-            //also need to make sure it is acutally bordering a cell
-            if (key.compare(manager[i].adjcells[adjCount]) == 0 || key.compare(manager[i].cell) == 0) {
-                //Makes sure that the agent is in the adjacent cell (THIS SECTION IS PROBABLY COUNTER PRODUCTIVE! THINK OF DELETEING THIS!)
-                /*
-                if(key.compare(manager[i].adjcells[adjCount]) == 0){
-                    bool notIn = true;
-                    check = &spatialHash[manager[i].adjcells[adjCount]];
-                    for (int k = 0; k < check->size(); k++) {
-                        if ((*(*check)[k]).id == manager[i].id) {
-                            notIn = false;
-                            break;
-                        }
-                    }
-                    if (notIn) {
-                        spatialHash[manager[i].adjcells[adjCount]].push_back(&manager[i]);
-                    }
-                }
-                */
-                //If the agent is no longer adjcent in the tested direction, then remove the agent from the cell and null the key
-                if (key.compare(manager[i].cell) == 0 && manager[i].adjcells[adjCount].compare("") != 0) {
-                    key = manager[i].adjcells[adjCount]; //Copying the old cell into key 
-                    manager[i].adjcells[adjCount] = "";
-                    //Check to see if the agent is completly unadjcent to the old cell
-                    //if it isnt, ignore it. If it is, remove itself from the old cell
-                    bool stillIn = false;
-                    for (int n = 0; n < 4; n++) {
-                        if (key.compare(manager[i].adjcells[n]) == 0) {
-                            stillIn = true;
-                            break;
-                        }
-                    }
-                    if (!stillIn) {
-                        //If it is not in the adjcell list, remove it from the old cell
-                        check = &spatialHash[key];
-                        for (int k = 0; k < check->size(); k++) {
-                            if ((*(*check)[k]).id == manager[i].id) {
-                                spatialHash[key].erase(check->begin() + k);
-                                break;
-                            }
-                        }
-                    }
-                }
-                adjCount++;
-                continue;
-            }
-            
-            //Since we already know the key must be different, erase the agent from the previous cell 
-            //We still need to make sure that there is actually anything to delete in the hash
-            if(manager[i].adjcells[adjCount].compare("") != 0){
-                //Check to see if the current cell being looked at is already in the list
-                bool escape = false;
-                for (int n = 0; n < 4; n++){
-                    if (n == adjCount) continue;
-                    if (manager[i].adjcells[adjCount].compare(manager[i].adjcells[n]) == 0) {
-                        escape = true;
-                        break;
-                    }
-                }
-                //If it is not still in the list, then delete it from the previous cell
-                if(!escape){
-                    check = &spatialHash[manager[i].adjcells[adjCount]];
-                    for (int k = 0; k < check->size(); k++) {
-                        if ((*(*check)[k]).id == manager[i].id) {
-                            spatialHash[manager[i].adjcells[adjCount]].erase(check->begin() + k);
-                            break;
-                        }
-                    }
-                }
-            }
-            //Need to check to see if the key exists but it moved
-            //If it has just merely moved to a different side of the agent, then move the key and move to another cell
-            for (int n = 0; n < 4; n++) {
-                if (key.compare(manager[i].adjcells[n]) == 0) {
-                    manager[i].adjcells[adjCount] = key;
-                    adjCount++;
-                    reset = true;
-                    break;
-                }
-            }
-            if (reset) {
-                reset = false;
-                continue;
-            }
-            //assign key to adj cells and add itself to hash. Then move on to next cell
-                manager[i].adjcells[adjCount] = key;
-                spatialHash[manager[i].adjcells[adjCount]].push_back(&manager[i]);
-            
-                adjCount += 1;
-            
-        }
-        
-    }
-    size = spatialHash.size();
-    loopCount++;
-    if (movedCell) {
-        printf("MOVED CELL\n");
-    }
 }
 void update(int value) {
     //TODO animation
@@ -872,8 +728,47 @@ void update(int value) {
         //setup loop based on cell amount and cell size, go through each cell A) see what agents are there and B) check what collsions exist 
         //TODO: Create add agent function
         if (shash) {
-          
-            //Make sure agents are in bounds
+            //Create hashes for every agent in the sim
+            for (int i = 0; i < NUMOFAGENTS; i++) {
+                if (manager[i].isEmpty) break;
+                int Index = hashFun(manager[i].x, manager[i].y);
+                for (int n = 0; n < BucketSize; n++) {
+                    if (spatialHash[Index][n] == -1) {
+                        spatialHash[Index][n] = manager[i].id;
+                        break;
+                    }
+                }
+                int adjCount = 0;
+                int prev[4] = { -1,-1,-1,-1 };
+                bool used = false;
+                for (int j = -1; j <= 1; j++) {
+                    for (int k = -1; k <= 1; k++) {
+                        if (j == 0 || k == 0) continue;
+                        used = false;
+                        Index = hashFun(manager[i].x + j * ARADIS, manager[i].y + k * ARADIS);
+                        for (int n = 0; n < 4; n++)
+                        {
+                            if (prev[n] == -1) break;
+                            if (prev[n] == Index) {
+                                adjCount += 1;
+                                used = true;
+                                break;
+                            }
+                        }
+                        if (used) continue;
+                        for (int n = 0; n < BucketSize; n++) {
+                            if (spatialHash[Index][n] == -1) {
+                                spatialHash[Index][n] = manager[i].id;
+                                prev[adjCount] = Index;
+                                break;
+                            }
+                        }
+                        adjCount += 1;
+                    
+                    }
+                }
+            }
+            //Make sure agents are in bounds and update agents
             for (int i = 0; i < NUMOFAGENTS; i++) {
                 manager[i].stepF(i);
                 if (manager[i].x > 500) manager[i].x = -499;
@@ -881,6 +776,8 @@ void update(int value) {
                 if (manager[i].y > 500) manager[i].y = -499;
                 if (manager[i].y < -500) manager[i].y = 499;
             }
+            //ClEAR ALL VALUES IN THE HASH!
+            memset(spatialHash,-1, sizeof(int) * width * width * BucketSize);
         }
         glutPostRedisplay(); // Inform GLUT that the display has changed
         glutTimerFunc(25, update, 0);//Call update after each 25 millisecond
