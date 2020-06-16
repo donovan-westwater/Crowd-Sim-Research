@@ -41,7 +41,7 @@ using namespace std;
 #define PI 3.14159265f
 #define ARADIS 10
 #define TIME_STEP 0.5 // was 0.5
-#define NUMOFAGENTS 300 //100 //Was 300
+#define NUMOFAGENTS 100 //100 //Was 300
 //bool circle = false;
 //bool quad = false;
 //bool mouse = false;
@@ -521,17 +521,25 @@ bool willCollide(Circle *a, Circle *b) {
     if (tau < 0)return false;
     else return true;
 }
+//GOAL: Implement social avoidence force model
+//This implmentation will ingore the friction force and the wall repulsion force
+//The big equation you see in the powerpoint (V(t)e(t)-V(t)/t) is just the force goal, so all we are 
+//focusing on are the inter-agent forces (ignore kg(r-d)v't section of the equation, deals with friction)
+//Equation becomes: f = {Aexp(r-d/B)+Kg(r-d)}n
 void step(int i) {
     const float d_h = 10 * 2 * ARADIS;
     float v_x = manager[i].dirX;
     float v_y = manager[i].dirY;
     const float zeta = 1.0023;
-    const float max_force = 0.1;
+    const float max_force = 1.5;
     const float max_speed = 1.5;
     const float timeStep = TIME_STEP;
     float f_goal_x = (manager[i].dir_goal_x - v_x) / zeta;
     float f_goal_y = (manager[i].dir_goal_y - v_y) / zeta;
    // if (manager[i].dir_goal_x > v_x) printf("ALERT!\n");
+    float A = 2000000;
+    float B = 0.08;
+    float k_repluse = 1.2 * 100000;
     float fAvoid_x = 0;
     float fAvoid_y = 0;
     float fAvoidCtr = 0;
@@ -542,13 +550,26 @@ void step(int i) {
         float dist = distance(manager[i].x, manager[i].y, manager[j].x, manager[j].y);
         if (dist > 0 && dist < d_h) {
             //if (!willCollide(&manager[i], &manager[j])) continue;
+            float r_ab_sub_dist = (2*ARADIS - dist);
+            long double g_repluse = 0;
+            if (r_ab_sub_dist > 0) {
+                g_repluse = r_ab_sub_dist * k_repluse;
+            }
+            long double favoid_mag = A * exp(r_ab_sub_dist / B) + g_repluse; //Pushes agenst out of eachother when the intersect
+            if (favoid_mag == INFINITY) favoid_mag = DBL_MAX;
+            if (favoid_mag == -INFINITY) favoid_mag = -DBL_MAX;
+            
             float d_ab = dist - 2 * ARADIS > 0.001 ? dist - 2 * ARADIS : 0.001;
-            float k = d_h - d_ab > 0 ? d_h - d_ab : 0;
+            //float k = d_h - d_ab > 0 ? d_h - d_ab : 0;
             float x_ab = (manager[i].x - manager[j].x) / dist;
             float y_ab = (manager[i].y - manager[j].y) / dist;
             interacting_agents += 1;
-            fAvoid_x += k * x_ab / d_ab;
-            fAvoid_y += k * y_ab / d_ab;
+            fAvoid_x += favoid_mag * x_ab / d_ab;
+            fAvoid_y += favoid_mag * y_ab / d_ab;
+            if (fAvoid_x >= INFINITY) fAvoid_x = FLT_MAX;
+            if (fAvoid_x <= -INFINITY) fAvoid_x = -FLT_MAX;
+            if (fAvoid_y >= INFINITY) fAvoid_y= FLT_MAX;
+            if (fAvoid_y <= -INFINITY) fAvoid_y = -FLT_MAX;
             fAvoidCtr += 1;
         }
     }
@@ -558,7 +579,13 @@ void step(int i) {
         }
         float forceSum_x = f_goal_x + fAvoid_x;
         float forceSum_y = f_goal_y + fAvoid_y;
+        if (forceSum_x >= INFINITY) forceSum_x = FLT_MAX;
+        if (forceSum_x <= -INFINITY) forceSum_x = -FLT_MAX;
+        if (forceSum_y >= INFINITY) forceSum_y = FLT_MAX;
+        if (forceSum_y <= -INFINITY) forceSum_y = -FLT_MAX;
         float fAvoid_Mag = sqrtf(forceSum_x * forceSum_x + forceSum_y * forceSum_y);
+        if (fAvoid_Mag == INFINITY) fAvoid_Mag = FLT_MAX;
+        if (fAvoid_Mag == -INFINITY) fAvoid_Mag = -FLT_MAX;
 
         if (fAvoid_Mag > max_force) {
             forceSum_x = max_force * forceSum_x / fAvoid_Mag;
@@ -584,12 +611,15 @@ void hashStep(int i) {
     float v_x = manager[i].dirX;
     float v_y = manager[i].dirY;
     const float zeta = 1.0023;
-    const float max_force = 1.55; //0.15
+    const float max_force = 1.5; // 1.55 //0.15
     const float max_speed = 1.5;
     const float timeStep = TIME_STEP;
     float f_goal_x = (manager[i].dir_goal_x - v_x) / zeta;
     float f_goal_y = (manager[i].dir_goal_y - v_y) / zeta;
     // if (manager[i].dir_goal_x > v_x) printf("ALERT!\n");
+    float A = 2000000;
+    float B = 0.08;
+    float k_repluse = 1.2 * 100000;
     float fAvoid_x = 0;
     float fAvoid_y = 0;
     float fAvoidCtr = 0;
@@ -631,13 +661,26 @@ void hashStep(int i) {
                 float dist = distance(manager[i].x, manager[i].y, c->x, c->y);
                 if (dist > 0 && dist < d_h) {
                     //if (!willCollide(&manager[i], c)) continue;
+                    float r_ab_sub_dist = (2 * ARADIS - dist);
+                    float g_repluse = 0;
+                    if (r_ab_sub_dist > 0) {
+                        g_repluse = r_ab_sub_dist * k_repluse;
+                    }
+                    float favoid_mag = A * exp(r_ab_sub_dist / B) + g_repluse;
+                    if (favoid_mag == INFINITY) favoid_mag = DBL_MAX;
+                    if (favoid_mag == -INFINITY) favoid_mag = -DBL_MAX;
+
                     float d_ab = dist - 2 * ARADIS > 0.001 ? dist - 2 * ARADIS : 0.001;
-                    float k = d_h - d_ab > 0 ? d_h - d_ab : 0;
+                    //float k = d_h - d_ab > 0 ? d_h - d_ab : 0;
                     float x_ab = (manager[i].x - c->x) / dist;
                     float y_ab = (manager[i].y - c->y) / dist;
                     interacting_agents += 1;
-                    fAvoid_x += k * x_ab / d_ab;
-                    fAvoid_y += k * y_ab / d_ab;
+                    fAvoid_x += favoid_mag * x_ab / d_ab;
+                    fAvoid_y += favoid_mag * y_ab / d_ab;
+                    if (fAvoid_x >= INFINITY) fAvoid_x = FLT_MAX;
+                    if (fAvoid_x <= -INFINITY) fAvoid_x = -FLT_MAX;
+                    if (fAvoid_y >= INFINITY) fAvoid_y = FLT_MAX;
+                    if (fAvoid_y <= -INFINITY) fAvoid_y = -FLT_MAX;
                     fAvoidCtr += 1;
                 }
             }
@@ -649,7 +692,13 @@ void hashStep(int i) {
     }
     float forceSum_x = f_goal_x + fAvoid_x;
     float forceSum_y = f_goal_y + fAvoid_y;
+    if (forceSum_x >= INFINITY) forceSum_x = FLT_MAX;
+    if (forceSum_x <= -INFINITY) forceSum_x = -FLT_MAX;
+    if (forceSum_y >= INFINITY) forceSum_y = FLT_MAX;
+    if (forceSum_y <= -INFINITY) forceSum_y = -FLT_MAX;
     float fAvoid_Mag = sqrtf(forceSum_x * forceSum_x + forceSum_y * forceSum_y);
+    if (fAvoid_Mag == INFINITY) fAvoid_Mag = FLT_MAX;
+    if (fAvoid_Mag == -INFINITY) fAvoid_Mag = -FLT_MAX;
 
     if (fAvoid_Mag > max_force) {
         forceSum_x = max_force * forceSum_x / fAvoid_Mag;
