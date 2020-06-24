@@ -7,7 +7,7 @@ public class AgentFacing : MonoBehaviour
     //Should probably integrate this code into the Agent Player
     public GameObject aimRet;
     Vector3 oldPos;
-    Vector3 facing;
+    public Vector3 facing;
 
     // Start is called before the first frame update
     void Start()
