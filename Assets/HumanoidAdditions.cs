@@ -11,6 +11,10 @@ public class HumanoidAdditions : MonoBehaviour
     Vector3 oldPos;
     Vector3 dir;
     float angle;
+    int updateCount = 0;
+    float avgSpeed = 0;
+    float[] prevSpeeds = { -1, -1, -1,-1};
+    int prevSpeedCounter = 0;
     void Start()
     {
         oldPos = this.transform.position;
@@ -47,7 +51,37 @@ public class HumanoidAdditions : MonoBehaviour
         //dir = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle));
         //dir.y = 0;
         Vector3 speed = this.transform.position - oldPos;
+        prevSpeeds[prevSpeedCounter] = speed.magnitude;
+        prevSpeedCounter++;
+        if(prevSpeedCounter > 3)
+        {
+            prevSpeedCounter = 0;
+        }
+        float numOfSpeeds = 0;
+        float totalSpeeds = 0;
+        for(int i = 0; i < 4; i++)
+        {
+            if (prevSpeeds[i] == -1) continue;
+            numOfSpeeds++;
+            totalSpeeds += prevSpeeds[i];
+        }
+        float avgS = totalSpeeds / numOfSpeeds;
         animator.SetFloat("speed", speed.magnitude);
+        bool idlemode = animator.GetBool("idlemode");
+        float curSpeed = speed.magnitude;
+        if (avgS <= 0) animator.SetBool("idlemode", true);
+        else animator.SetBool("idlemode", false);
+
         oldPos = this.transform.position;
+
+        avgSpeed += speed.magnitude;
+        updateCount += 1;
+        //if (!Input.GetKey(KeyCode.D)) this.transform.position += new Vector3(1,0,0) * Time.deltaTime;
+    }
+
+    private void OnApplicationQuit()
+    {
+        avgSpeed /= updateCount;
+        Debug.Log("Average speed: " + avgSpeed);
     }
 }
