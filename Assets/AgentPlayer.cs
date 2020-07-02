@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -39,6 +40,9 @@ public class AgentPlayer : MonoBehaviour
         backsim.StartInfo.Arguments = "-shash";
         backsim.StartInfo.UseShellExecute = true;
 
+        
+        backsim.Start();
+        while(!File.Exists("frames/frame1.txt")) Thread.Sleep(1000);
         fnum = Directory.GetFiles("./frames").Length;
         lines = File.ReadAllLines("frames/frame1.txt");
         amount = lines.Length;
@@ -47,12 +51,14 @@ public class AgentPlayer : MonoBehaviour
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
 
-        backsim.Start();
+        //backsim.Start();
     }
 
     // Update is called once per frame
     void Update()
     {
+        fnum = Directory.GetFiles("./frames").Length;
+        rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
         //rewind.value = count;
         if (playmode) {
@@ -124,5 +130,10 @@ public class AgentPlayer : MonoBehaviour
     private void OnApplicationQuit()
     {
         backsim.Kill();
+        DirectoryInfo di = new DirectoryInfo("./frames");
+        foreach (FileInfo file in di.GetFiles())
+        {
+            file.Delete();
+        }
     }
 }
