@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,8 +28,17 @@ public class AgentPlayer : MonoBehaviour
     public GameObject prefab;
     public Text display;
     public Slider rewind;
+
+    Process backsim = new Process();
     void Start()
     {
+        UnityEngine.Debug.Log(Application.dataPath);
+
+        backsim.StartInfo.WorkingDirectory = Application.dataPath + "/../OpenGL/";
+        backsim.StartInfo.FileName = Application.dataPath + "/../OpenGL/OpenGL.exe";
+        backsim.StartInfo.Arguments = "-shash";
+        backsim.StartInfo.UseShellExecute = true;
+
         fnum = Directory.GetFiles("./frames").Length;
         lines = File.ReadAllLines("frames/frame1.txt");
         amount = lines.Length;
@@ -36,6 +46,8 @@ public class AgentPlayer : MonoBehaviour
         agents = new GameObject[amount];
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
+
+        backsim.Start();
     }
 
     // Update is called once per frame
@@ -76,6 +88,7 @@ public class AgentPlayer : MonoBehaviour
         {
             // display.text = "Current frame of simulation: " + count;
             //rewind.value = count;
+
             if (!Input.GetKey(KeyCode.LeftArrow) && !Input.GetKey(KeyCode.RightArrow) && !Input.GetKeyDown(KeyCode.Space))
             {
                 count = (int)rewind.value;
@@ -106,5 +119,10 @@ public class AgentPlayer : MonoBehaviour
             }
             
         }
+    }
+
+    private void OnApplicationQuit()
+    {
+        backsim.Kill();
     }
 }

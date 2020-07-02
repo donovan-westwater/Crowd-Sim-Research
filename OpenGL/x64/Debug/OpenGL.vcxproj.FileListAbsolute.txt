@@ -1,0 +1,4 @@
+C:\Users\donov\Desktop\Coding Area\College coding\OpenGL\x64\Debug\OpenGL.exe
+C:\Users\donov\Desktop\Coding Area\College coding\OpenGL\x64\Debug\OpenGL.pdb
+C:\Users\donov\Desktop\Coding Area\Game Develpoment area\GraphicsWork\GraphicsWork\OpenGL\x64\Debug\OpenGL.exe
+C:\Users\donov\Desktop\Coding Area\Game Develpoment area\GraphicsWork\GraphicsWork\OpenGL\x64\Debug\OpenGL.pdb
