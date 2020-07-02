@@ -42,7 +42,7 @@ public class AgentPlayer : MonoBehaviour
 
         
         backsim.Start();
-        while(!File.Exists("frames/frame1.txt")) Thread.Sleep(1000);
+        while(!File.Exists("frames/frame1.txt")) Thread.Sleep(2000);
         fnum = Directory.GetFiles("./frames").Length;
         lines = File.ReadAllLines("frames/frame1.txt");
         amount = lines.Length;
