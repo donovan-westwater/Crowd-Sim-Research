@@ -97,6 +97,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <OutDir>.</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">
     <LinkIncremental>true</LinkIncremental>
@@ -105,6 +106,7 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>C:\Users\donov\Desktop\Coding Area\College coding\OpenGL\Dependecies\include;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\donov\Desktop\Coding Area\College coding\OpenGL\Dependecies\lib;$(LibraryPath)</LibraryPath>
+    <OutDir>.</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">
     <LinkIncremental>true</LinkIncremental>
