@@ -1,0 +1,23 @@
+double r_ab_sub_dist = (2 * ARADIS - dist);
+            long double g_repluse = 0;
+            if (r_ab_sub_dist > 0) {
+                g_repluse = r_ab_sub_dist * k_repluse;
+            }
+            long double chek = A*exp((double)(r_ab_sub_dist / B));
+            long double favoid_mag = A * exp((double)(r_ab_sub_dist / B)) + g_repluse; //Pushes agenst out of eachother when the intersect
+           
+            
+            float d_ab = dist - 2 * ARADIS > 0.001 ? dist - 2 * ARADIS : 0.001;
+            
+            float x_ab = (manager[i].x - manager[j].x) / dist;
+            float y_ab = (manager[i].y - manager[j].y) / dist;
+            
+            fAvoid_x += favoid_mag * x_ab / d_ab;
+            fAvoid_y += favoid_mag * y_ab / d_ab;
+            
+            //friction section
+            favoid_mag = k_frict * g_repluse;
+            float frict_vx = (manager[j].dirX - manager[i].dirX)*(-y_ab / d_ab);
+            float frict_vy = (manager[j].dirY - manager[i].dirY)*(x_ab / d_ab);
+            fAvoid_x += frict_vx * favoid_mag;
+            fAvoid_y += frict_vy * favoid_mag;

@@ -40,8 +40,8 @@ using namespace std;
 #define ZFAR 1.0 //4.0
 #define PI 3.14159265f
 #define ARADIS 10
-#define TIME_STEP 0.5 // was 0.5
-#define NUMOFAGENTS 300 //100 //Was 300
+#define TIME_STEP 0.25 // was 0.5
+#define NUMOFAGENTS 2 //300 
 //bool circle = false;
 //bool quad = false;
 //bool mouse = false;
@@ -79,8 +79,8 @@ typedef struct Circle {
     GLfloat z = 0;
     GLfloat dirX;
     GLfloat dirY;
-    GLfloat dir_goal_x;
-    GLfloat dir_goal_y;
+    GLfloat goal_x;
+    GLfloat goal_y;
     bool circleDrag = false; 
     bool isEmpty = true;
     void (*draw)(float x, float y, float z) { draw_circle };
@@ -141,12 +141,12 @@ void initGL() {
     }
     if (favoid) {
         for (int i = 0; i < NUMOFAGENTS; i++) {
-            manager[i].x =  (float)(rand() % 1000) - 500; //(i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 5;
-            manager[i].y =   (float)(rand() % 1000) - 500;//(i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150;
-            manager[i].dirX = (float)(rand() % 10) - 5;   //0;
-            manager[i].dirY = (float)(rand() % 10) - 5;   //(i + 1) % 2 == 0 ? manager[i].dirY = -0.5 : manager[i].dirY = 0.5;
-            manager[i].dir_goal_x = (float)(rand() % 10) - 5; //manager[i].dirX;
-            manager[i].dir_goal_y = (float)(rand() % 10) - 5; //manager[i].dirY;
+            manager[i].x = (i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 0;//(float)(rand() % 1000) - 500; //(i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 5;
+            manager[i].y = (i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150;//(float)(rand() % 1000) - 500;//(i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150;
+            manager[i].dirX = 0;//(float)(rand() % 10) - 5;   //0;
+            manager[i].dirY = (i + 1) % 2 == 0 ? manager[i].dirY = -0.5 : manager[i].dirY = 0.5;//(float)(rand() % 10) - 5;   //(i + 1) % 2 == 0 ? manager[i].dirY = -0.5 : manager[i].dirY = 0.5;
+            manager[i].goal_x = manager[i].dirX;//(float)(rand() % 1000) - 500; //manager[i].dirX;
+            manager[i].goal_y = -manager[i].y;//(float)(rand() % 1000) - 500; //manager[i].dirY;
             manager[i].isEmpty = false;
             manager[i].id = i;
         }
@@ -162,10 +162,10 @@ void initGL() {
                 manager[i].y = (float)(rand() % 1000) - 500; //i % 2 == 0 ? -400:400; 
                 manager[i].dirX = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
                 manager[i].dirY = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
-                manager[i].dir_goal_x = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
-                manager[i].dir_goal_y = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
-                if (abs(manager[i].dir_goal_x) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_x = -1 : manager[i].dir_goal_x = 1;
-                if (abs(manager[i].dir_goal_y) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_y = -1 : manager[i].dir_goal_y = 1;
+                manager[i].goal_x = (float)(rand() % 1000) - 500; //i % 2 == 0 ? 1 : -1;
+                manager[i].goal_y = (float)(rand() % 1000) - 500; //i % 2 == 0 ? 1 : -1;
+                //if (abs(manager[i].dir_goal_x) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_x = -1 : manager[i].dir_goal_x = 1;
+                //if (abs(manager[i].dir_goal_y) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_y = -1 : manager[i].dir_goal_y = 1;
                 manager[i].stepF = hashStep;
                 manager[i].id = i;
                 if (manager[i].x > 500) manager[i].x = -499;
@@ -379,6 +379,16 @@ void draw_circle(float x, float  y, float z) {
     glDrawArrays(GL_LINE_LOOP, 0, 10);
     glDisableClientState(GL_VERTEX_ARRAY);
 }
+void display_stats(int id) {
+    char num[70];
+    sprintf_s(num, "ID: %d Dir of X: %f Dir of Y: %f",id,manager[id].dirX, manager[id].dirY); //Var nameare
+    glRasterPos2d(manager[id].x - (ARADIS + 0.5), manager[id].y+(ARADIS+5));
+    glColor3f(0, 1, 0);
+    int len = (int)strlen(num);
+    for (int i = 0; i < len; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_10, (int)num[i]);
+    }
+}
 void draw_quad(float x, float y, float z)
 {
    
@@ -468,6 +478,7 @@ void display() {
         for (int i = 0; i < NUMOFAGENTS; i++) {
             if (manager[i].isEmpty) break;
             manager[i].draw(manager[i].x, manager[i].y, manager[i].z);
+            if (fps) display_stats(i);
         }
         draw_grid();
     }
@@ -517,7 +528,7 @@ bool willCollide(Circle *a, Circle *b) {
     if (discr <= 0) {
         return false;
     }
-    float tau = (dotWV - sqrt(discr)) / dotV;
+    float tau = (dotWV - sqrtf(discr)) / dotV;
     if (tau < 0)return false;
     else return true;
 }
@@ -527,20 +538,29 @@ bool willCollide(Circle *a, Circle *b) {
 //focusing on are the inter-agent forces (ignore kg(r-d)v't section of the equation, deals with friction)
 //Equation becomes: f = {Aexp(r-d/B)+Kg(r-d)}n
 void step(int i) {
-    const float d_h = 3 * 2 * ARADIS;// 10 * 2 * ARADIS;
+    const float d_h = 10 * 2 * ARADIS;// 10 * 2 * ARADIS;
     double v_x = manager[i].dirX;
     double v_y = manager[i].dirY;
     const float zeta = 1.0023;
     const float max_force = 1.5; //1.5
     const float max_speed = 1.5;
+    const float prefSpeed = 0.75;
     const float timeStep = TIME_STEP;
-    float f_goal_x = (manager[i].dir_goal_x - v_x) / zeta;
-    float f_goal_y = (manager[i].dir_goal_y - v_y) / zeta;
+    float prefVeloX = manager[i].goal_x - manager[i].x;
+    float prefVeloY = manager[i].goal_y - manager[i].y;
+    prefVeloX = prefSpeed * (prefVeloX / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+    prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+    //Add coords for goal, and replace dir_goal with a vector to the goal
+    //Add a weight on how much goal and current veclotiy combine (10% goal 90% current for example)
+    float f_goal_x = (prefVeloX - v_x) / zeta;//0.9 * prefVeloX+ 0.1 * v_x; //(prefVeloX - v_x) / zeta; 0.2 * prefVeloX + 0.8 * v_x;
+    float f_goal_y = (prefVeloY - v_y) / zeta;//0.9* prefVeloY + 0.1 * v_y;//(prefVeloY - v_y) / zeta; 0.2 * prefVeloY + 0.8 * v_y;
     
     float A = 2000;
     float B = 0.08;//0.08
-    float k_repluse = 1.2 * 100000;
+    float k = 1.50;//1500000000000000000;//1.5;
     float k_frict = 0;//100;
+    float t0 = 3; //2 - 4
+    float m = 2;
     double fAvoid_x = 0;
     double fAvoid_y = 0;
     float fAvoidCtr = 0;
@@ -550,32 +570,38 @@ void step(int i) {
         if (i == j) continue;
         float dist = distance(manager[i].x, manager[i].y, manager[j].x, manager[j].y);
         if (dist > 0 && dist < d_h) {
-            
-            double r_ab_sub_dist = (2 * ARADIS - dist);
-            long double g_repluse = 0;
-            if (r_ab_sub_dist > 0) {
-                g_repluse = r_ab_sub_dist * k_repluse;
+            //Collsion code goes here [Main issue: The time to collision (tt) is inaccurate and predicts a time that is too far!]
+            float rad = 2 * ARADIS;
+            //rad = rad * 1.05;
+            if (dist < 2*ARADIS) {
+                rad = 2 * ARADIS - dist;
             }
-            long double chek = A*exp((double)(r_ab_sub_dist / B));
-            long double favoid_mag = A * exp((double)(r_ab_sub_dist / B)) + g_repluse; //Pushes agenst out of eachother when the intersect
-           
-            
-            float d_ab = dist - 2 * ARADIS > 0.001 ? dist - 2 * ARADIS : 0.001;
-            
-            float x_ab = (manager[i].x - manager[j].x) / dist;
-            float y_ab = (manager[i].y - manager[j].y) / dist;
-            
-            fAvoid_x += favoid_mag * x_ab / d_ab;
-            fAvoid_y += favoid_mag * y_ab / d_ab;
-            
-            //friction section
-            favoid_mag = k_frict * g_repluse;
-            float frict_vx = (manager[j].dirX - manager[i].dirX)*(-y_ab / d_ab);
-            float frict_vy = (manager[j].dirY - manager[i].dirY)*(x_ab / d_ab);
-            fAvoid_x += frict_vx * favoid_mag;
-            fAvoid_y += frict_vy * favoid_mag;
+            //bool coll = willCollide(&manager[i], &manager[j]);
+            float wx = manager[j].x - manager[i].x;
+            float wy = manager[j].y - manager[i].y;
+            float vx = manager[i].dirX - manager[j].dirX;
+            float vy = manager[i].dirY - manager[j].dirY;
+            //if(vx == 0 && wx == 0) vx += 5.1;
+            //if(vy == 0 && vy == 0) vy += 5.1;
+            float a = vx * vx + vy * vy;
+            float b = wx * vx + wy * vy;
+            float c = (wx * wx + wy * wy) - rad*rad;
+            float discr = b * b - a * c;
+            if (discr > 0 && (a < -0.00001f || a > 0.00001f)) {
+                discr = sqrtf(discr);
+                float tt = (b - discr) / a;
+                //tt /= 90000.0f;
+                if (tt > 0) {
+                    float part1 = -k * exp(-tt / t0);
+                    float part2 = (a * powf(tt, m));
+                    float part3 = (m / tt + 1 / t0);
+                    float part4 = (vx - (b * vx - a * wx) / discr);
+                    fAvoid_x += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vx - (b * vx - a * wx) / discr) ;
+                    fAvoid_y += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vy - (b * vy - a * wy) / discr);
+                }
+            }
 
-           
+            //Collsion code stops here
             fAvoidCtr += 1;
         }
     }
@@ -616,9 +642,16 @@ void hashStep(int i) {
     const float zeta = 1.0023;
     const float max_force = 1.5; // 1.55 //0.15
     const float max_speed = 1.5;
+    const float prefSpeed = 0.75;
     const float timeStep = TIME_STEP;
-    float f_goal_x = (manager[i].dir_goal_x - v_x) / zeta;
-    float f_goal_y = (manager[i].dir_goal_y - v_y) / zeta;
+    float prefVeloX = manager[i].goal_x - manager[i].x;
+    float prefVeloY = manager[i].goal_y - manager[i].y;
+    prefVeloX = prefSpeed * (prefVeloX / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+    prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+    //Add coords for goal, and replace dir_goal with a vector to the goal
+    //Add a weight on how much goal and current veclotiy combine (10% goal 90% current for example)
+    float f_goal_x = 0.01 * prefVeloX + 0.99 * v_x; //(manager[i].dir_goal_x - v_x) / zeta;
+    float f_goal_y = 0.01 * prefVeloY + 0.99 * v_y;//(manager[i].dir_goal_y - v_y) / zeta;
     // if (manager[i].dir_goal_x > v_x) printf("ALERT!\n");
     float A = 2000;
     float B = 0.08;
