@@ -554,7 +554,12 @@ void step(int i) {
     //Add a weight on how much goal and current veclotiy combine (10% goal 90% current for example)
     float f_goal_x = (prefVeloX - v_x) / zeta;//0.9 * prefVeloX+ 0.1 * v_x; //(prefVeloX - v_x) / zeta; 0.2 * prefVeloX + 0.8 * v_x;
     float f_goal_y = (prefVeloY - v_y) / zeta;//0.9* prefVeloY + 0.1 * v_y;//(prefVeloY - v_y) / zeta; 0.2 * prefVeloY + 0.8 * v_y;
-    
+    float ran = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    ran -= 0.5;
+    f_goal_x += ran;
+    ran = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    ran -= 0.5;
+    f_goal_y += ran;
     float A = 2000;
     float B = 0.08;//0.08
     float k = 1.50;//1500000000000000000;//1.5;
