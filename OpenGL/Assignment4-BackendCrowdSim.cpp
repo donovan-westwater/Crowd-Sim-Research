@@ -41,7 +41,7 @@ using namespace std;
 #define PI 3.14159265f
 #define ARADIS 10
 #define TIME_STEP 0.25 // was 0.5
-#define NUMOFAGENTS 2 //300 
+#define NUMOFAGENTS 2//16 //300 
 //bool circle = false;
 //bool quad = false;
 //bool mouse = false;
@@ -141,11 +141,12 @@ void initGL() {
     }
     if (favoid) {
         for (int i = 0; i < NUMOFAGENTS; i++) {
-            manager[i].x = (i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 0;//(float)(rand() % 1000) - 500; //(i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 5;
-            manager[i].y = (i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150;//(float)(rand() % 1000) - 500;//(i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150;
+            float ang = 2 * PI / NUMOFAGENTS;
+            manager[i].x = 100*sin(ang*i);//(float)(rand() % 1000) - 500; //(i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 5;
+            manager[i].y = 100*cos(ang * i);//(float)(rand() % 1000) - 500;//(i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150;
             manager[i].dirX = 0;//(float)(rand() % 10) - 5;   //0;
-            manager[i].dirY = (i + 1) % 2 == 0 ? manager[i].dirY = -0.5 : manager[i].dirY = 0.5;//(float)(rand() % 10) - 5;   //(i + 1) % 2 == 0 ? manager[i].dirY = -0.5 : manager[i].dirY = 0.5;
-            manager[i].goal_x = manager[i].dirX;//(float)(rand() % 1000) - 500; //manager[i].dirX;
+            manager[i].dirY = 0;//(float)(rand() % 10) - 5;   //(i + 1) % 2 == 0 ? manager[i].dirY = -0.5 : manager[i].dirY = 0.5;
+            manager[i].goal_x = -manager[i].x;//(float)(rand() % 1000) - 500; //manager[i].dirX;
             manager[i].goal_y = -manager[i].y;//(float)(rand() % 1000) - 500; //manager[i].dirY;
             manager[i].isEmpty = false;
             manager[i].id = i;
@@ -541,10 +542,10 @@ void step(int i) {
     const float d_h = 10 * 2 * ARADIS;// 10 * 2 * ARADIS;
     double v_x = manager[i].dirX;
     double v_y = manager[i].dirY;
-    const float zeta = 1.0023;
-    const float max_force = 1.5; //1.5
+    const float zeta = 0.54;//1.0023;
+    const float max_force = 20; //1.5
     const float max_speed = 1.5;
-    const float prefSpeed = 0.75;
+    const float prefSpeed = 1.5;
     const float timeStep = TIME_STEP;
     float prefVeloX = manager[i].goal_x - manager[i].x;
     float prefVeloY = manager[i].goal_y - manager[i].y;
@@ -555,16 +556,16 @@ void step(int i) {
     float f_goal_x = (prefVeloX - v_x) / zeta;//0.9 * prefVeloX+ 0.1 * v_x; //(prefVeloX - v_x) / zeta; 0.2 * prefVeloX + 0.8 * v_x;
     float f_goal_y = (prefVeloY - v_y) / zeta;//0.9* prefVeloY + 0.1 * v_y;//(prefVeloY - v_y) / zeta; 0.2 * prefVeloY + 0.8 * v_y;
     float ran = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    ran -= 0.5;
+    ran =0.2*ran - 0.1;
     f_goal_x += ran;
     ran = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    ran -= 0.5;
+    ran = 0.2 * ran - 0.1;
     f_goal_y += ran;
     float A = 2000;
     float B = 0.08;//0.08
-    float k = 1.50;//1500000000000000000;//1.5;
+    float k = 1500;//1500000000000000000;//1.5;
     float k_frict = 0;//100;
-    float t0 = 3; //2 - 4
+    float t0 = 30000000; //2 - 4
     float m = 2;
     double fAvoid_x = 0;
     double fAvoid_y = 0;
