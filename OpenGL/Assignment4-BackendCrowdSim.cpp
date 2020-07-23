@@ -39,9 +39,9 @@ using namespace std;
 
 #define ZFAR 1.0 //4.0
 #define PI 3.14159265f
-#define ARADIS 10
+#define ARADIS 0.5 //10
 #define TIME_STEP 0.25 // was 0.5
-#define NUMOFAGENTS 2//16 //300 
+#define NUMOFAGENTS 16//16 //300 
 //bool circle = false;
 //bool quad = false;
 //bool mouse = false;
@@ -57,7 +57,7 @@ float frames = 0;
 float curFps = 0;
 float fps_avg = 0;
 float updateTime = 0;
-float updateFrames=0;
+float updateFrames = 0;
 //ARGS
 bool anim = false;
 bool crowd = false;
@@ -65,14 +65,14 @@ bool shash = false;
 bool favoid = false;
 bool fps = false;
 
-void draw_circle(float x, float  y, float z);
+void draw_circle(float x, float  y, float z, bool atGoal);
 void step(int i);
 void hashStep(int i);
 
 typedef pair<int, int> coord; //For hashmap
 typedef struct Circle {
     int id; //Used for spatial hash
-    coord cell = {-555, -555 }; //Used for Spatial Hash //was oringaly string
+    coord cell = { -555, -555 }; //Used for Spatial Hash //was oringaly string
     coord adjcells[4] = { {-555, -555} ,{-555, -555} ,{-555, -555} ,{-555, -555} }; //Used for Spatial Hash //Was oringally string[4]
     GLfloat x;
     GLfloat y;
@@ -81,32 +81,25 @@ typedef struct Circle {
     GLfloat dirY;
     GLfloat goal_x;
     GLfloat goal_y;
-    bool circleDrag = false; 
+    bool circleDrag = false;
     bool isEmpty = true;
-    void (*draw)(float x, float y, float z) { draw_circle };
+    bool atGoal = false;
+    void (*draw)(float x, float y, float z, bool atGoal) { draw_circle };
     void (*stepF)(int i) { step };
 };
 Circle manager[NUMOFAGENTS] = { 0 };
-// SPATIAL HASH 
-/*
-struct HASH { //Needs to fix
-    size_t operator()(const coord x)const {
-        return hash<long long>()(((long long)x.first) ^ (((long long)x.second) << 32));
-    }
-};
-unordered_map<coord, std::vector<Circle *>,HASH> spatialHash; //int[] was orginally a string
-unordered_map<int, string> intToStr;
-*/
-#define CELL_SIZE 25
+
+#define ENVIRO_SIZE 50
+#define CELL_SIZE 2//25
 #define BucketSize 20
-#define width (500 - -500)/CELL_SIZE
+#define width ((ENVIRO_SIZE/2) - -(ENVIRO_SIZE/2))/CELL_SIZE
 int spatialHash[width * width][BucketSize];
 //Hash not correct atm WIP Create a HashSize that is width*width+width (to include the cell for 500)
 int hashFun(float x, float y) {
     int xpart = (int)(x / CELL_SIZE) * CELL_SIZE;
     int ypart = (int)(y / CELL_SIZE) * CELL_SIZE;
-    int out = (((xpart+500) / CELL_SIZE) +  ((ypart+500) / CELL_SIZE) * width);
-    return out; 
+    int out = (((xpart + (ENVIRO_SIZE / 2)) / CELL_SIZE) + ((ypart + (ENVIRO_SIZE / 2)) / CELL_SIZE) * width);
+    return out;
 }
 
 void initGL() {
@@ -123,10 +116,10 @@ void initGL() {
     */
     if (anim) {
         for (int i = 0; i < 3; i++) {
-            manager[i].x = (float)(rand()%3) - 1.5;
-            manager[i].y = (float)(rand()%3) - 1.5;
-            manager[i].dirX = (float)(rand()%3) - 1.5;
-            manager[i].dirY = (float)(rand()%3) - 1.5;
+            manager[i].x = (float)(rand() % 3) - 1.5;
+            manager[i].y = (float)(rand() % 3) - 1.5;
+            manager[i].dirX = (float)(rand() % 3) - 1.5;
+            manager[i].dirY = (float)(rand() % 3) - 1.5;
             manager[i].isEmpty = false;
         }
     }
@@ -141,13 +134,13 @@ void initGL() {
     }
     if (favoid) {
         for (int i = 0; i < NUMOFAGENTS; i++) {
-            float ang = 2 * PI / NUMOFAGENTS;
-            manager[i].x = 100*sin(ang*i);//(float)(rand() % 1000) - 500; //(i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 5;
-            manager[i].y = 100*cos(ang * i);//(float)(rand() % 1000) - 500;//(i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150;
+            //float ang = 2 * PI / NUMOFAGENTS;
+            manager[i].x = (float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //(float)(rand() % 1000) - 500; //(i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 5; 10*cos(ang*i);
+            manager[i].y = (float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //(float)(rand() % 1000) - 500;//(i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150; 10*sin(ang * i);
             manager[i].dirX = 0;//(float)(rand() % 10) - 5;   //0;
             manager[i].dirY = 0;//(float)(rand() % 10) - 5;   //(i + 1) % 2 == 0 ? manager[i].dirY = -0.5 : manager[i].dirY = 0.5;
-            manager[i].goal_x = -manager[i].x;//(float)(rand() % 1000) - 500; //manager[i].dirX;
-            manager[i].goal_y = -manager[i].y;//(float)(rand() % 1000) - 500; //manager[i].dirY;
+            manager[i].goal_x = (float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //(float)(rand() % 1000) - 500; //manager[i].dirX;
+            manager[i].goal_y = (float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //(float)(rand() % 1000) - 500; //manager[i].dirY;
             manager[i].isEmpty = false;
             manager[i].id = i;
         }
@@ -156,10 +149,10 @@ void initGL() {
         lasttime = time(NULL);
     }
     if (shash) {
-        
+
         if (!favoid) {
             for (int i = 0; i < NUMOFAGENTS; i++) {
-                manager[i].x =  (float)(rand() % 1000) - 500; //i % 2 == 0 ? -500 + i * 20 : -500 + i * 20;
+                manager[i].x = (float)(rand() % 1000) - 500; //i % 2 == 0 ? -500 + i * 20 : -500 + i * 20;
                 manager[i].y = (float)(rand() % 1000) - 500; //i % 2 == 0 ? -400:400; 
                 manager[i].dirX = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
                 manager[i].dirY = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
@@ -173,143 +166,36 @@ void initGL() {
                 if (manager[i].x < -500) manager[i].x = 499;
                 if (manager[i].y > 500) manager[i].y = -499;
                 if (manager[i].y < -500) manager[i].y = 499;
-               // manager[i].cell = {NULL,NULL};
-               //manager[i].adjcells[0] = { NULL,NULL };
-               // manager[i].adjcells[1] = { NULL,NULL };
-               // manager[i].adjcells[2] = { NULL,NULL };
-               //manager[i].adjcells[3] = { NULL,NULL };
+                // manager[i].cell = {NULL,NULL};
+                //manager[i].adjcells[0] = { NULL,NULL };
+                // manager[i].adjcells[1] = { NULL,NULL };
+                // manager[i].adjcells[2] = { NULL,NULL };
+                //manager[i].adjcells[3] = { NULL,NULL };
                 manager[i].isEmpty = false;
             }
         }
-        else if(favoid) {
+        else if (favoid) {
             for (int i = 0; i < NUMOFAGENTS; i++) {
                 manager[i].stepF = hashStep;
                 manager[i].id = i;
-               // manager[i].cell = { NULL,NULL };
-               // manager[i].adjcells[0] = { NULL,NULL };
-               // manager[i].adjcells[1] = { NULL,NULL };
-                //manager[i].adjcells[2] = { NULL,NULL };
-               // manager[i].adjcells[3] = { NULL,NULL };
+                // manager[i].cell = { NULL,NULL };
+                // manager[i].adjcells[0] = { NULL,NULL };
+                // manager[i].adjcells[1] = { NULL,NULL };
+                 //manager[i].adjcells[2] = { NULL,NULL };
+                // manager[i].adjcells[3] = { NULL,NULL };
             }
         }
         memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
-        /*
-        for (int i = 0; i < NUMOFAGENTS; i++) {
-            if (manager[i].isEmpty) break;
-            //int X = (int)(manager[i].x / CELL_SIZE) * CELL_SIZE;
-            //int Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
-            //int minX = (int)((manager[i].x - ARADIS) / CELL_SIZE) * CELL_SIZE;
-            //int minY = (int)((manager[i].y - ARADIS) / CELL_SIZE) * CELL_SIZE;
-            //int maxX = (int)((manager[i].x + ARADIS) / CELL_SIZE) * CELL_SIZE;
-            //int maxY = (int)((manager[i].y + ARADIS) / CELL_SIZE) * CELL_SIZE;
-            //string key = "";
-            //key += to_string(X);
-            //key += ",";
-            //key += to_string(Y);
-            //manager[i].cell.first = X; //key;
-            //manager[i].cell.second = Y;
-            //spatialHash[key].push_back(manager[i]);
-            int Index = hashFun(manager[i].x, manager[i].y);
-            for (int n = 0; n < BucketSize; n++) {
-                if (spatialHash[Index][n] == -1) {
-                    spatialHash[Index][n] = manager[i].id;
-                    break;
-                }
-            }
-            int adjCount = 0;
-            //string prev[4];
-            int prev[4] = { -1,-1,-1,-1 };
-            bool used = false;
-            for (int j = -1; j <= 1; j++) {
-                for (int k = -1; k <= 1; k++) {
-                    if (j == 0 || k == 0) continue;
-                    used = false;
-                    Index = hashFun(manager[i].x + j*ARADIS, manager[i].y + k*ARADIS);
-                    for (int n = 0; n < 4; n++)
-                    {
-                        if(prev[n] == -1) break;
-                        if (prev[n] == Index) {
-                            adjCount += 1;
-                            used = true;
-                            break;
-                        }
-                    }
-                    if (used) continue;
-                    for (int n = 0; n < BucketSize; n++) {
-                        if (spatialHash[Index][n] == -1) {
-                            spatialHash[Index][n] = manager[i].id;
-                            prev[adjCount] = Index;
-                            //adjCount += 1;
-                            break;
-                        }
-                    }
-                    
-                    
-                    //spatialHash[key].push_back(manager[i]);
-                    adjCount += 1;
-                }
-            }
-            //spatialHash[manager[i].cell].push_back(&manager[i]);
-            //if(manager[i].adjcells[0].first != -555 || manager[i].adjcells[0].second != -555) spatialHash[manager[i].adjcells[0]].push_back(&manager[i]);
-            //if (manager[i].adjcells[1].first != -555 || manager[i].adjcells[1].second != -555) spatialHash[manager[i].adjcells[1]].push_back(&manager[i]);
-            //if (manager[i].adjcells[2].first != -555 || manager[i].adjcells[2].second != -555) spatialHash[manager[i].adjcells[2]].push_back(&manager[i]);
-           // if (manager[i].adjcells[3].first != -555 || manager[i].adjcells[3].second != -555) spatialHash[manager[i].adjcells[3]].push_back(&manager[i]);
-            //if(manager[i].adjcells[0].compare("") !=0) spatialHash[manager[i].adjcells[0]].push_back(&manager[i]);
-            //if (manager[i].adjcells[1].compare("") != 0) spatialHash[manager[i].adjcells[1]].push_back(&manager[i]);
-            //if (manager[i].adjcells[2].compare("") != 0) spatialHash[manager[i].adjcells[2]].push_back(&manager[i]);
-            //if (manager[i].adjcells[3].compare("") != 0) spatialHash[manager[i].adjcells[3]].push_back(&manager[i]);
-            /*
-            if (minX != X && minY != Y) {
-                key = "";
-                key += to_string(minX);
-                key += ",";
-                key += to_string(minY);
-                manager[i].adjcells[3] = key;
-                spatialHash[key].push_back(manager[i]);
-            }
-            if (maxX != X && maxY != Y) {
-                key = "";
-                key += to_string(maxX);
-                key += ",";
-                key += to_string(maxY);
-                manager[i].adjcells[1] = key;
-                spatialHash[key].push_back(manager[i]);
-            }
-            if (maxX != X && minY != Y) {
-                key = "";
-                key += to_string(maxX);
-                key += ",";
-                key += to_string(minY);
-                manager[i].adjcells[2] = key;
-                spatialHash[key].push_back(manager[i]);
-            }
-            if (minX != X && maxY != Y) {
-                key = "";
-                key += to_string(maxX);
-                key += ",";
-                key += to_string(maxY);
-                manager[i].adjcells[0] = key;
-                spatialHash[key].push_back(manager[i]);
-            }
-            
+
     }
-        
-        
-        for (int i = 0; i < (1000 * 1000) / CELL_SIZE; i++) {
-            //spatialHash[i].push_back(manager[i]);
-            
-        }
-        
-        */
-    }
-    
+
 }
 void mouseCordConvert(float x, float y, float* outX, float* outY) {
     GLint viewport[4];
     GLdouble modelview[16];
     GLdouble projection[16];
     GLfloat winX, winY;
-    GLdouble posX, posY,posZ;
+    GLdouble posX, posY, posZ;
 
     glGetDoublev(GL_MODELVIEW_MATRIX, modelview);
     glGetDoublev(GL_PROJECTION_MATRIX, projection);
@@ -324,29 +210,29 @@ void mouseCordConvert(float x, float y, float* outX, float* outY) {
     gluUnProject(winX, winY, 0, modelview, projection, viewport, &posX, &posY, &posZ);
     *outX = (float)posX;
     *outY = (float)posY;
-   //emcpy(x, &posX, sizeof(float));
-   // memcpy(y, &posY, sizeof(float));
+    //emcpy(x, &posX, sizeof(float));
+    // memcpy(y, &posY, sizeof(float));
 }
 void mouseFunc(int button, int buttonState, int x, int y) {
     //TODO
-        for (int i = 0; i < NUMOFAGENTS; i++) {
-            if (manager[i].isEmpty) break;
-            if (button == GLUT_LEFT_BUTTON && buttonState == GLUT_DOWN) {
-                float outX, outY;
-                mouseCordConvert(x, y,&outX,&outY);
-				printf("Mouse coords: %f,%f\n", outX, outY);
-                if (((outX - manager[i].x) * (outX - manager[i].x) + (-outY - manager[i].y) * (-outY - manager[i].y)) <= 10 * 10) {
-                    manager[i].circleDrag = true;
-                }
-                else{
-                    manager[i].circleDrag = false;
-                }
+    for (int i = 0; i < NUMOFAGENTS; i++) {
+        if (manager[i].isEmpty) break;
+        if (button == GLUT_LEFT_BUTTON && buttonState == GLUT_DOWN) {
+            float outX, outY;
+            mouseCordConvert(x, y, &outX, &outY);
+            printf("Mouse coords: %f,%f\n", outX, outY);
+            if (((outX - manager[i].x) * (outX - manager[i].x) + (-outY - manager[i].y) * (-outY - manager[i].y)) <= 10 * 10) {
+                manager[i].circleDrag = true;
             }
-            else{
+            else {
                 manager[i].circleDrag = false;
-                }
             }
-        
+        }
+        else {
+            manager[i].circleDrag = false;
+        }
+    }
+
 }
 
 void mouseDragFunc(int x, int y) {
@@ -364,26 +250,27 @@ void mouseDragFunc(int x, int y) {
 }
 
 
-void draw_circle(float x, float  y, float z) {
+void draw_circle(float x, float  y, float z, bool atGoal) {
     GLfloat points[30];
-    float angleStep = (PI/180) * (360.0f / 10.0f);
+    float angleStep = (PI / 180) * (360.0f / 10.0f);
     for (int i = 0; i < 10; i++) {
-        points[3*i] = x+ARADIS*cos((float)i*angleStep);
-        points[3*i+1] =y+ARADIS*sin((float)i*angleStep);
-        points[3*i+2] = 0;
+        points[3 * i] = x + ARADIS * cos((float)i * angleStep);
+        points[3 * i + 1] = y + ARADIS * sin((float)i * angleStep);
+        points[3 * i + 2] = 0;
     }
     glEnableClientState(GL_VERTEX_ARRAY);
     glVertexPointer(3, GL_FLOAT, 0, points);
-    glColor3f(0.807, 0.0, 0.0);
-    glDrawArrays(GL_POLYGON, 0,10);
+    if (atGoal) glColor3f(0.0, 0.807, 0.0);
+    else glColor3f(0.807, 0.0, 0.0);
+    glDrawArrays(GL_POLYGON, 0, 10);
     glColor3f(0.0, 0.0, 0.0);
     glDrawArrays(GL_LINE_LOOP, 0, 10);
     glDisableClientState(GL_VERTEX_ARRAY);
 }
 void display_stats(int id) {
     char num[70];
-    sprintf_s(num, "ID: %d Dir of X: %f Dir of Y: %f",id,manager[id].dirX, manager[id].dirY); //Var nameare
-    glRasterPos2d(manager[id].x - (ARADIS + 0.5), manager[id].y+(ARADIS+5));
+    sprintf_s(num, "ID: %d Dir of X: %f Dir of Y: %f", id, manager[id].dirX, manager[id].dirY); //Var nameare
+    glRasterPos2d(manager[id].x - (ARADIS + 0.5), manager[id].y + (ARADIS + 5));
     glColor3f(0, 1, 0);
     int len = (int)strlen(num);
     for (int i = 0; i < len; i++) {
@@ -392,14 +279,14 @@ void display_stats(int id) {
 }
 void draw_quad(float x, float y, float z)
 {
-   
+
     GLfloat points[] = {
-        x+10.0f,y +5.0f,0,
-        x +5.0f,y + 5.0f,0,
+        x + 10.0f,y + 5.0f,0,
+        x + 5.0f,y + 5.0f,0,
         x + 5.0f,y + 10.0f,0,
-        x +10.0f,y + 10.0f,0
+        x + 10.0f,y + 10.0f,0
     };
-    
+
     glEnableClientState(GL_VERTEX_ARRAY);
     glVertexPointer(3, GL_FLOAT, 0, points);
     glColor3f(0.807, 0.0, 0.0);
@@ -407,7 +294,7 @@ void draw_quad(float x, float y, float z)
     glColor3f(0.0, 0.0, 0.0);
     glDrawArrays(GL_LINE_LOOP, 0, 4);
     glDisableClientState(GL_VERTEX_ARRAY);
-    
+
     /*
     glBegin(GL_QUADS);              // Each set of 4 vertices form a quad
     glColor3f(1.0f, 0.0f, 0.0f); // Red
@@ -419,17 +306,17 @@ void draw_quad(float x, float y, float z)
     */
 }
 void draw_grid() {
-    for (int x = -500; x < 500; x += CELL_SIZE) {
+    for (int x = -ENVIRO_SIZE / 2; x < ENVIRO_SIZE / 2; x += CELL_SIZE) {
         glBegin(GL_LINES);
         glColor3f(0.0, 0.807, 0.2);
         glVertex2f(x, -500);
         glVertex2f(x, 500);
         glEnd();
     }
-    for (int y = -500; y < 500; y += CELL_SIZE) {
+    for (int y = -ENVIRO_SIZE / 2; y < ENVIRO_SIZE / 2; y += CELL_SIZE) {
         glBegin(GL_LINES);
         glColor3f(0.2, 0.807, 0.2);
-        glVertex2f(-500,y);
+        glVertex2f(-500, y);
         glVertex2f(500, y);
         glEnd();
     }
@@ -443,10 +330,24 @@ void camera(float diam, float c_x, float c_y) {
     float right = c_x + diam;
     float bottom = c_y - diam;
     float top = c_y + diam;
+    //Aspect Ratio Adjustment
+    GLsizei height = glutGet(GLUT_WINDOW_HEIGHT);
+    GLsizei wid = glutGet(GLUT_WINDOW_WIDTH);
+    if (height == 0) height = 1;                // To prevent divide by 0
+    GLfloat aspect = (GLfloat)wid / (GLfloat)height;
+    glViewport(0, 0, (GLsizei)wid, (GLsizei)height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     //glOrtho(left, right, bottom, top, zNear, zFar);
-	glOrtho(-c_x/2,c_x/2 ,-c_y/2, c_y/2, zNear, zFar);
+    //glOrtho(-c_x / 2, c_x / 2, -c_y / 2, c_y / 2, zNear, zFar);
+    if (wid >= height) {
+        // aspect >= 1, set the height from -1 to 1, with larger width
+        glOrtho(aspect * (-c_x / 2), aspect * (c_x / 2), -c_y / 2, c_y / 2, zNear, zFar);
+    }
+    else {
+        // aspect < 1, set the width to -1 to 1, with larger height
+        glOrtho(-c_x / 2, c_x / 2, (-c_y / 2) / aspect, (c_y / 2) / aspect, zNear, zFar);
+    }
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glScalef(1, -1, 1);
@@ -456,9 +357,9 @@ void camera(float diam, float c_x, float c_y) {
 /* Handler for window-repaint event. Call back when the window first appears and
    whenever the window needs to be re-painted. */
 void display() {
-    camera(ZFAR, 1000, 1000);
-    glViewport(0, 0, (GLsizei)1000, (GLsizei)1000); // Set our viewport to the size of our window
-    glMatrixMode(GL_MODELVIEW); 
+    camera(ZFAR, ENVIRO_SIZE, ENVIRO_SIZE);
+    //glViewport(0, 0, (GLsizei)1000, (GLsizei)1000); // Set our viewport to the size of our window
+    glMatrixMode(GL_MODELVIEW);
     glClearColor(0.870f, 0.905f, 0.937f, 1.0f); // Set background color to back and opaque
     glClear(GL_COLOR_BUFFER_BIT);         // Clear the color buffer (background)
     /*
@@ -471,14 +372,14 @@ void display() {
         for (int i = 0; i < 50; i++) {
             if (manager[i].isEmpty) break;
             manager[i].draw(manager[i].x, manager[i].y, manager[i].z);
-			//printf("Current Cords: %f,%f\n", manager[i].x, manager[i].y);
+            //printf("Current Cords: %f,%f\n", manager[i].x, manager[i].y);
         }
     }
     */
-    if (anim||crowd||favoid||shash) {
+    if (anim || crowd || favoid || shash) {
         for (int i = 0; i < NUMOFAGENTS; i++) {
             if (manager[i].isEmpty) break;
-            manager[i].draw(manager[i].x, manager[i].y, manager[i].z);
+            manager[i].draw(manager[i].x, manager[i].y, manager[i].z, manager[i].atGoal);
             if (fps) display_stats(i);
         }
         draw_grid();
@@ -499,8 +400,8 @@ void display() {
             updateFrames = 0;
         }
         char num[50];
-        sprintf_s(num, "AVG FPS: %f CUR FPS: %f", curFps,fps_avg); //Var nameare
-        glRasterPos2d(0.0, 0.0);
+        sprintf_s(num, "AVG FPS: %f CUR FPS: %f", curFps, fps_avg); //Var nameare
+        glRasterPos2d((double)(ENVIRO_SIZE / 4), -(double)(ENVIRO_SIZE / 4));
         glColor3f(1, 0, 0);
         int len = (int)strlen(num);
         for (int i = 0; i < len; i++) {
@@ -509,17 +410,17 @@ void display() {
 
 
     }
-   
+
     glFlush();  // Render now
 }
-float distance(float x1,float y1,float  x2,float y2) {
+float distance(float x1, float y1, float  x2, float y2) {
     return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
-bool willCollide(Circle *a, Circle *b) {
+bool willCollide(Circle* a, Circle* b) {
     float radi = 2 * ARADIS;
     float wX = b->x - a->x;
     float wY = b->y - a->y;
-    float c = (wX * wX + wY * wY) - radi*radi;
+    float c = (wX * wX + wY * wY) - radi * radi;
     if (c < 0) return true;
     float vX = a->dirX - b->dirX;
     float vY = a->dirY - b->dirY;
@@ -539,38 +440,44 @@ bool willCollide(Circle *a, Circle *b) {
 //focusing on are the inter-agent forces (ignore kg(r-d)v't section of the equation, deals with friction)
 //Equation becomes: f = {Aexp(r-d/B)+Kg(r-d)}n
 void step(int i) {
-    const float d_h = 10 * 2 * ARADIS;// 10 * 2 * ARADIS;
+    float goalDist = distance(manager[i].x, manager[i].y, manager[i].goal_x, manager[i].goal_y);
+    if (goalDist < 0.5) {
+        if (!manager[i].atGoal) manager[i].atGoal = true;
+        //return;
+        manager[i].dirX = 0;
+        manager[i].dirY = 0;
+        manager[i].goal_x = manager[i].x;
+        manager[i].goal_y = manager[i].y;
+    }
+    const float d_h = 10;// 10 * 2 * ARADIS;
     double v_x = manager[i].dirX;
     double v_y = manager[i].dirY;
     const float zeta = 0.54;//1.0023;
     const float max_force = 20; //1.5
-    const float max_speed = 1.5;
+    const float max_speed = 2;
     const float prefSpeed = 1.5;
-    const float timeStep = TIME_STEP;
+    const float timeStep = TIME_STEP / 10;
     float prefVeloX = manager[i].goal_x - manager[i].x;
     float prefVeloY = manager[i].goal_y - manager[i].y;
-    prefVeloX = prefSpeed * (prefVeloX / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
-    prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+    if (prefVeloX != 0 && prefVeloY != 0) {
+        prefVeloX = prefSpeed * (prefVeloX / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+        prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+    }
     //Add coords for goal, and replace dir_goal with a vector to the goal
     //Add a weight on how much goal and current veclotiy combine (10% goal 90% current for example)
     float f_goal_x = (prefVeloX - v_x) / zeta;//0.9 * prefVeloX+ 0.1 * v_x; //(prefVeloX - v_x) / zeta; 0.2 * prefVeloX + 0.8 * v_x;
     float f_goal_y = (prefVeloY - v_y) / zeta;//0.9* prefVeloY + 0.1 * v_y;//(prefVeloY - v_y) / zeta; 0.2 * prefVeloY + 0.8 * v_y;
-    float ran = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    ran =0.2*ran - 0.1;
-    f_goal_x += ran;
-    ran = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-    ran = 0.2 * ran - 0.1;
-    f_goal_y += ran;
+
     float A = 2000;
     float B = 0.08;//0.08
-    float k = 1500;//1500000000000000000;//1.5;
+    float k = 1.5;
     float k_frict = 0;//100;
-    float t0 = 30000000; //2 - 4
+    float t0 = 3.0000000; //2 - 4
     float m = 2;
     double fAvoid_x = 0;
     double fAvoid_y = 0;
     float fAvoidCtr = 0;
-    
+
     for (int j = 0; j < NUMOFAGENTS; j++) {
         compteCount += 1;
         if (i == j) continue;
@@ -579,7 +486,7 @@ void step(int i) {
             //Collsion code goes here [Main issue: The time to collision (tt) is inaccurate and predicts a time that is too far!]
             float rad = 2 * ARADIS;
             //rad = rad * 1.05;
-            if (dist < 2*ARADIS) {
+            if (dist < 2 * ARADIS) {
                 rad = 2 * ARADIS - dist;
             }
             //bool coll = willCollide(&manager[i], &manager[j]);
@@ -591,7 +498,7 @@ void step(int i) {
             //if(vy == 0 && vy == 0) vy += 5.1;
             float a = vx * vx + vy * vy;
             float b = wx * vx + wy * vy;
-            float c = (wx * wx + wy * wy) - rad*rad;
+            float c = (wx * wx + wy * wy) - rad * rad;
             float discr = b * b - a * c;
             if (discr > 0 && (a < -0.00001f || a > 0.00001f)) {
                 discr = sqrtf(discr);
@@ -602,7 +509,7 @@ void step(int i) {
                     float part2 = (a * powf(tt, m));
                     float part3 = (m / tt + 1 / t0);
                     float part4 = (vx - (b * vx - a * wx) / discr);
-                    fAvoid_x += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vx - (b * vx - a * wx) / discr) ;
+                    fAvoid_x += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vx - (b * vx - a * wx) / discr);
                     fAvoid_y += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vy - (b * vy - a * wy) / discr);
                 }
             }
@@ -611,42 +518,44 @@ void step(int i) {
             fAvoidCtr += 1;
         }
     }
-        if (fAvoidCtr > 0) {
-            fAvoid_x = fAvoid_x / fAvoidCtr;
-            fAvoid_y = fAvoid_y / fAvoidCtr;
-        }
-        double forceSum_x = f_goal_x + fAvoid_x;
-        double forceSum_y = f_goal_y + fAvoid_y;
-     
-        double fAvoid_Mag = sqrt(forceSum_x * forceSum_x + forceSum_y * forceSum_y);
-      
+    if (fAvoidCtr > 0) {
+        fAvoid_x = fAvoid_x / fAvoidCtr;
+        fAvoid_y = fAvoid_y / fAvoidCtr;
+    }
+    double forceSum_x = f_goal_x + fAvoid_x;
+    double forceSum_y = f_goal_y + fAvoid_y;
 
-        if (fAvoid_Mag > max_force) {
-            forceSum_x = max_force * forceSum_x / fAvoid_Mag;
-            forceSum_y = max_force * forceSum_y / fAvoid_Mag;
-        }
+    double fAvoid_Mag = sqrt(forceSum_x * forceSum_x + forceSum_y * forceSum_y);
 
-        v_x += timeStep * forceSum_x;
-        v_y += timeStep * forceSum_y;
-        float speed = sqrtf(v_x* v_x+ v_y*v_y);
-        if (speed > max_speed) {
-            v_x = max_speed * v_x / speed;
-            v_y = max_speed * v_y / speed;
-        }
-        manager[i].dirX = v_x;
-        manager[i].dirY = v_y;
-        manager[i].x += timeStep* v_x;
-        manager[i].y += timeStep* v_y;
-    
+
+    if (fAvoid_Mag > max_force) {
+        forceSum_x = max_force * forceSum_x / fAvoid_Mag;
+        forceSum_y = max_force * forceSum_y / fAvoid_Mag;
+    }
+
+    v_x += timeStep * forceSum_x;
+    v_y += timeStep * forceSum_y;
+    float speed = sqrtf(v_x * v_x + v_y * v_y);
+    if (speed > max_speed) {
+        v_x = max_speed * v_x / speed;
+        v_y = max_speed * v_y / speed;
+    }
+    manager[i].dirX = v_x;
+    manager[i].dirY = v_y;
+    manager[i].x += timeStep * v_x;
+    manager[i].y += timeStep * v_y;
+
 }
 //Chnage d_h to 3*2*ARADIS
 //B to 0.88 (B determines how far the agents will push apart from eachother)
 void hashStep(int i) {
-    const float d_h = 7 * 2 * ARADIS;
+    float goalDist = distance(manager[i].x, manager[i].y, manager[i].goal_x, manager[i].goal_y);
+    if (goalDist < 0.5) return;
+    const float d_h = 10;// *2 * ARADIS;
     double v_x = manager[i].dirX;
     double v_y = manager[i].dirY;
-    const float zeta = 1.0023;
-    const float max_force = 1.5; // 1.55 //0.15
+    const float zeta = 0.54;// 1.0023;
+    const float max_force = 20; // 1.55 //0.15
     const float max_speed = 1.5;
     const float prefSpeed = 0.75;
     const float timeStep = TIME_STEP;
@@ -656,13 +565,13 @@ void hashStep(int i) {
     prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
     //Add coords for goal, and replace dir_goal with a vector to the goal
     //Add a weight on how much goal and current veclotiy combine (10% goal 90% current for example)
-    float f_goal_x = 0.01 * prefVeloX + 0.99 * v_x; //(manager[i].dir_goal_x - v_x) / zeta;
-    float f_goal_y = 0.01 * prefVeloY + 0.99 * v_y;//(manager[i].dir_goal_y - v_y) / zeta;
+    float f_goal_x = (prefVeloX - v_x) / zeta;
+    float f_goal_y = (prefVeloY - v_y) / zeta;
     // if (manager[i].dir_goal_x > v_x) printf("ALERT!\n");
-    float A = 2000;
-    float B = 0.08;
-    float k_repluse = 1.2 * 100000;
-    float k_frict = 0;//10000;
+    float k = 1.5;
+    float k_frict = 0;//100;
+    float t0 = 3.0000000; //2 - 4
+    float m = 2;
     double fAvoid_x = 0;
     double fAvoid_y = 0;
     float fAvoidCtr = 0;
@@ -672,7 +581,7 @@ void hashStep(int i) {
     //int Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
     //int test = hashFun(manager[i].x, manager[i].x);
     //int test2 = hashFun(X, Y);
-    int *list;
+    int* list;
     int hash;
     for (int x = -2; x <= 2; x++) {
         for (int y = -2; y <= 2; y++) {
@@ -681,13 +590,13 @@ void hashStep(int i) {
             int adjy = manager[i].y + y * CELL_SIZE;
             if (adjx >= 500 || adjx <= -500) continue;
             if (adjy >= 500 || adjy <= -500) continue;
-           // key.clear();
-            //key += to_string(adjx);
-           // key += intToStr.at(adjx);///[adjx];
-           // key += ",";
-            //key += intToStr.at(adjy);//[adjy];
-            //key += to_string(adjy);
-           // if (spatialHash.count(key) < 1) continue;
+            // key.clear();
+             //key += to_string(adjx);
+            // key += intToStr.at(adjx);///[adjx];
+            // key += ",";
+             //key += intToStr.at(adjy);//[adjy];
+             //key += to_string(adjy);
+            // if (spatialHash.count(key) < 1) continue;
             try {
                 hash = hashFun(adjx, adjy);
                 list = spatialHash[hashFun(adjx, adjy)];//&spatialHash[key];
@@ -703,35 +612,36 @@ void hashStep(int i) {
                 if (manager[i].id == c->id) continue; //manager[i].x == c->x && manager[i].y == c->y
                 float dist = distance(manager[i].x, manager[i].y, c->x, c->y);
                 if (dist > 0 && dist < d_h) {
-                    //if (!willCollide(&manager[i], c)) continue;
-                    double r_ab_sub_dist = (2 * ARADIS - dist);
-                    float g_repluse = 0;
-                    if (r_ab_sub_dist > 0) {
-                        g_repluse = r_ab_sub_dist * k_repluse;
+                    //Collsion code goes here [Main issue: The time to collision (tt) is inaccurate and predicts a time that is too far!]
+                    float rad = 2 * ARADIS;
+                    //rad = rad * 1.05;
+                    if (dist < 2 * ARADIS) {
+                        rad = 2 * ARADIS - dist;
                     }
-                    double favoid_mag = A * exp(r_ab_sub_dist / B) + g_repluse;
-                    //if (favoid_mag >= INFINITY) favoid_mag = FLT_MAX;
-                    //if (favoid_mag <= -INFINITY) favoid_mag = -FLT_MAX;
-
-                    float d_ab = dist - 2 * ARADIS > 0.001 ? dist - 2 * ARADIS : 0.001;
-                    //float k = d_h - d_ab > 0 ? d_h - d_ab : 0;
-                    float x_ab = (manager[i].x - c->x) / dist;
-                    float y_ab = (manager[i].y - c->y) / dist;
-                    interacting_agents += 1;
-                    fAvoid_x += favoid_mag * x_ab / d_ab;
-                    fAvoid_y += favoid_mag * y_ab / d_ab;
-
-                    //friction section
-                    favoid_mag = k_frict * g_repluse;
-                    float frict_vx = (manager[j].dirX - manager[i].dirX) * (-y_ab / d_ab);
-                    float frict_vy = (manager[j].dirY - manager[i].dirY) * (x_ab / d_ab);
-                    fAvoid_x += frict_vx * favoid_mag;
-                    fAvoid_y += frict_vy * favoid_mag;
-
-                    //if (fAvoid_x >= INFINITY) fAvoid_x = FLT_MAX;
-                    //if (fAvoid_x <= -INFINITY) fAvoid_x = -FLT_MAX;
-                    //if (fAvoid_y >= INFINITY) fAvoid_y = FLT_MAX;
-                    //if (fAvoid_y <= -INFINITY) fAvoid_y = -FLT_MAX;
+                    //bool coll = willCollide(&manager[i], &manager[j]);
+                    float wx = manager[j].x - manager[i].x;
+                    float wy = manager[j].y - manager[i].y;
+                    float vx = manager[i].dirX - manager[j].dirX;
+                    float vy = manager[i].dirY - manager[j].dirY;
+                    //if(vx == 0 && wx == 0) vx += 5.1;
+                    //if(vy == 0 && vy == 0) vy += 5.1;
+                    float a = vx * vx + vy * vy;
+                    float b = wx * vx + wy * vy;
+                    float c = (wx * wx + wy * wy) - rad * rad;
+                    float discr = b * b - a * c;
+                    if (discr > 0 && (a < -0.00001f || a > 0.00001f)) {
+                        discr = sqrtf(discr);
+                        float tt = (b - discr) / a;
+                        //tt /= 90000.0f;
+                        if (tt > 0) {
+                            float part1 = -k * exp(-tt / t0);
+                            float part2 = (a * powf(tt, m));
+                            float part3 = (m / tt + 1 / t0);
+                            float part4 = (vx - (b * vx - a * wx) / discr);
+                            fAvoid_x += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vx - (b * vx - a * wx) / discr);
+                            fAvoid_y += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vy - (b * vy - a * wy) / discr);
+                        }
+                    }
                     fAvoidCtr += 1;
                 }
             }
@@ -769,8 +679,8 @@ void hashStep(int i) {
         v_x = max_speed * v_x / speed;
         v_y = max_speed * v_y / speed;
     }
-        
-    
+
+
     //float oldX = manager[i].x;
     //float oldY = manager[i].y;
 
@@ -781,8 +691,8 @@ void hashStep(int i) {
     //Updates circles location in the hash [Double check that its working properly!]
     //X = (int)(manager[i].x / CELL_SIZE) * CELL_SIZE;
    // Y = (int)(manager[i].y / CELL_SIZE) * CELL_SIZE;
-    
-    
+
+
 }
 void storLocs() {
     ofstream frame;
@@ -830,64 +740,64 @@ void update(int value) {
         }
     }
 
-        //hash system here
-        //setup loop based on cell amount and cell size, go through each cell A) see what agents are there and B) check what collsions exist 
-        //TODO: Create add agent function
-        if (shash) {
-            //Create hashes for every agent in the sim
-            for (int i = 0; i < NUMOFAGENTS; i++) {
-                if (manager[i].isEmpty) break;
-                int Index = hashFun(manager[i].x, manager[i].y);
-                for (int n = 0; n < BucketSize; n++) {
-                    if (spatialHash[Index][n] == -1) {
-                        spatialHash[Index][n] = manager[i].id;
-                        break;
-                    }
-                }
-                int adjCount = 0;
-                int prev[4] = { -1,-1,-1,-1 };
-                bool used = false;
-                for (int j = -1; j <= 1; j++) {
-                    for (int k = -1; k <= 1; k++) {
-                        if (j == 0 || k == 0) continue;
-                        used = false;
-                        Index = hashFun(manager[i].x + j * ARADIS, manager[i].y + k * ARADIS);
-                        for (int n = 0; n < 4; n++)
-                        {
-                            if (prev[n] == -1) break;
-                            if (prev[n] == Index) {
-                                adjCount += 1;
-                                used = true;
-                                break;
-                            }
-                        }
-                        if (used) continue;
-                        for (int n = 0; n < BucketSize; n++) {
-                            if (spatialHash[Index][n] == -1) {
-                                spatialHash[Index][n] = manager[i].id;
-                                prev[adjCount] = Index;
-                                break;
-                            }
-                        }
-                        adjCount += 1;
-                    
-                    }
+    //hash system here
+    //setup loop based on cell amount and cell size, go through each cell A) see what agents are there and B) check what collsions exist 
+    //TODO: Create add agent function
+    if (shash) {
+        //Create hashes for every agent in the sim
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            if (manager[i].isEmpty) break;
+            int Index = hashFun(manager[i].x, manager[i].y);
+            for (int n = 0; n < BucketSize; n++) {
+                if (spatialHash[Index][n] == -1) {
+                    spatialHash[Index][n] = manager[i].id;
+                    break;
                 }
             }
-            //Make sure agents are in bounds and update agents
-            for (int i = 0; i < NUMOFAGENTS; i++) {
-                manager[i].stepF(i);
-                if (manager[i].x > 500) manager[i].x = -499;
-                if (manager[i].x < -500) manager[i].x = 499;
-                if (manager[i].y > 500) manager[i].y = -499;
-                if (manager[i].y < -500) manager[i].y = 499;
+            int adjCount = 0;
+            int prev[4] = { -1,-1,-1,-1 };
+            bool used = false;
+            for (int j = -1; j <= 1; j++) {
+                for (int k = -1; k <= 1; k++) {
+                    if (j == 0 || k == 0) continue;
+                    used = false;
+                    Index = hashFun(manager[i].x + j * ARADIS, manager[i].y + k * ARADIS);
+                    for (int n = 0; n < 4; n++)
+                    {
+                        if (prev[n] == -1) break;
+                        if (prev[n] == Index) {
+                            adjCount += 1;
+                            used = true;
+                            break;
+                        }
+                    }
+                    if (used) continue;
+                    for (int n = 0; n < BucketSize; n++) {
+                        if (spatialHash[Index][n] == -1) {
+                            spatialHash[Index][n] = manager[i].id;
+                            prev[adjCount] = Index;
+                            break;
+                        }
+                    }
+                    adjCount += 1;
+
+                }
             }
-            storLocs();
-            //ClEAR ALL VALUES IN THE HASH!
-            memset(spatialHash,-1, sizeof(int) * width * width * BucketSize);
         }
-        glutPostRedisplay(); // Inform GLUT that the display has changed
-        glutTimerFunc(25, update, 0);//Call update after each 25 millisecond
+        //Make sure agents are in bounds and update agents
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            manager[i].stepF(i);
+            if (manager[i].x > 500) manager[i].x = -499;
+            if (manager[i].x < -500) manager[i].x = 499;
+            if (manager[i].y > 500) manager[i].y = -499;
+            if (manager[i].y < -500) manager[i].y = 499;
+        }
+        storLocs();
+        //ClEAR ALL VALUES IN THE HASH!
+        memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
+    }
+    glutPostRedisplay(); // Inform GLUT that the display has changed
+    glutTimerFunc(25, update, 0);//Call update after each 25 millisecond
 }
 
 /* Main function: GLUT runs as a console application starting at main()  */
@@ -924,7 +834,6 @@ int main(int argc, char** argv) {
         }
     }
     if (!shash && !fps && !favoid && !anim && !crowd) printf("No args found!\n");
-    //printf("TEST\n");
     //Option check ends
     glutInit(&argc, argv);                 // Initialize GLUT
     glutCreateWindow("OpenGL Setup Test"); // Create a window with the given title
