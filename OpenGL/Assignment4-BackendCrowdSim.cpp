@@ -41,7 +41,7 @@ using namespace std;
 #define PI 3.14159265f
 #define ARADIS 0.5 //10
 #define TIME_STEP 0.25 // was 0.5
-#define NUMOFAGENTS 16//16 //300 
+#define NUMOFAGENTS 16 //300 
 //bool circle = false;
 //bool quad = false;
 //bool mouse = false;
@@ -92,7 +92,7 @@ Circle manager[NUMOFAGENTS] = { 0 };
 #define ENVIRO_SIZE 50
 #define CELL_SIZE 2//25
 #define BucketSize 20
-#define width ((ENVIRO_SIZE/2) - -(ENVIRO_SIZE/2))/CELL_SIZE
+#define width (ENVIRO_SIZE)/CELL_SIZE //(ENVIRO_SIZE/2) - -(ENVIRO_SIZE/2)
 int spatialHash[width * width][BucketSize];
 //Hash not correct atm WIP Create a HashSize that is width*width+width (to include the cell for 500)
 int hashFun(float x, float y) {
@@ -152,20 +152,22 @@ void initGL() {
 
         if (!favoid) {
             for (int i = 0; i < NUMOFAGENTS; i++) {
-                manager[i].x = (float)(rand() % 1000) - 500; //i % 2 == 0 ? -500 + i * 20 : -500 + i * 20;
-                manager[i].y = (float)(rand() % 1000) - 500; //i % 2 == 0 ? -400:400; 
-                manager[i].dirX = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
-                manager[i].dirY = (float)(rand() % 10) - 5; //i % 2 == 0 ? 1 : -1;
-                manager[i].goal_x = (float)(rand() % 1000) - 500; //i % 2 == 0 ? 1 : -1;
-                manager[i].goal_y = (float)(rand() % 1000) - 500; //i % 2 == 0 ? 1 : -1;
+                float ang = 2 * PI / NUMOFAGENTS;
+                manager[i].x = 10 * cos(ang * i);//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); 
+                manager[i].y = 10 * sin(ang * i);//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); 
+                manager[i].dirX = 0; //i % 2 == 0 ? 1 : -1;
+                manager[i].dirY = 0; //i % 2 == 0 ? 1 : -1;
+                manager[i].goal_x = -manager[i].x;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+                manager[i].goal_y = -manager[i].y;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
                 //if (abs(manager[i].dir_goal_x) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_x = -1 : manager[i].dir_goal_x = 1;
                 //if (abs(manager[i].dir_goal_y) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_y = -1 : manager[i].dir_goal_y = 1;
                 manager[i].stepF = hashStep;
                 manager[i].id = i;
-                if (manager[i].x > 500) manager[i].x = -499;
-                if (manager[i].x < -500) manager[i].x = 499;
-                if (manager[i].y > 500) manager[i].y = -499;
-                if (manager[i].y < -500) manager[i].y = 499;
+                float limit = (ENVIRO_SIZE / 2);
+                if (manager[i].x > limit) manager[i].x = -limit +1;
+                if (manager[i].x < -limit) manager[i].x = limit - 1;
+                if (manager[i].y > limit) manager[i].y = -limit + 1;
+                if (manager[i].y < -limit) manager[i].y = limit - 1;
                 // manager[i].cell = {NULL,NULL};
                 //manager[i].adjcells[0] = { NULL,NULL };
                 // manager[i].adjcells[1] = { NULL,NULL };
@@ -270,7 +272,7 @@ void draw_circle(float x, float  y, float z, bool atGoal) {
 void display_stats(int id) {
     char num[70];
     sprintf_s(num, "ID: %d Dir of X: %f Dir of Y: %f", id, manager[id].dirX, manager[id].dirY); //Var nameare
-    glRasterPos2d(manager[id].x - (ARADIS + 0.5), manager[id].y + (ARADIS + 5));
+    glRasterPos2d(manager[id].x - (ARADIS + 0.5), manager[id].y + (ARADIS + 0.5));
     glColor3f(0, 1, 0);
     int len = (int)strlen(num);
     for (int i = 0; i < len; i++) {
@@ -550,19 +552,28 @@ void step(int i) {
 //B to 0.88 (B determines how far the agents will push apart from eachother)
 void hashStep(int i) {
     float goalDist = distance(manager[i].x, manager[i].y, manager[i].goal_x, manager[i].goal_y);
-    if (goalDist < 0.5) return;
+    if (goalDist < 0.5) {
+        if (!manager[i].atGoal) manager[i].atGoal = true;
+        //return;
+        manager[i].dirX = 0;
+        manager[i].dirY = 0;
+        manager[i].goal_x = manager[i].x;
+        manager[i].goal_y = manager[i].y;
+    }
     const float d_h = 10;// *2 * ARADIS;
     double v_x = manager[i].dirX;
     double v_y = manager[i].dirY;
     const float zeta = 0.54;// 1.0023;
     const float max_force = 20; // 1.55 //0.15
-    const float max_speed = 1.5;
-    const float prefSpeed = 0.75;
-    const float timeStep = TIME_STEP;
+    const float max_speed = 2;
+    const float prefSpeed = 1.5;
+    const float timeStep = TIME_STEP/10;
     float prefVeloX = manager[i].goal_x - manager[i].x;
     float prefVeloY = manager[i].goal_y - manager[i].y;
-    prefVeloX = prefSpeed * (prefVeloX / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
-    prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+    if (prefVeloX != 0 && prefVeloY != 0) {
+        prefVeloX = prefSpeed * (prefVeloX / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+        prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
+    }
     //Add coords for goal, and replace dir_goal with a vector to the goal
     //Add a weight on how much goal and current veclotiy combine (10% goal 90% current for example)
     float f_goal_x = (prefVeloX - v_x) / zeta;
@@ -583,13 +594,14 @@ void hashStep(int i) {
     //int test2 = hashFun(X, Y);
     int* list;
     int hash;
-    for (int x = -2; x <= 2; x++) {
-        for (int y = -2; y <= 2; y++) {
+    int lookSize = d_h / CELL_SIZE;
+    for (int x = -lookSize; x <= lookSize; x++) { //2
+        for (int y = -lookSize; y <= lookSize; y++) { //2
             //if (x == 0 && y == 0)continue;
             int adjx = manager[i].x + x * CELL_SIZE;
             int adjy = manager[i].y + y * CELL_SIZE;
-            if (adjx >= 500 || adjx <= -500) continue;
-            if (adjy >= 500 || adjy <= -500) continue;
+            if (adjx >= ENVIRO_SIZE/2 || adjx <= -ENVIRO_SIZE/2) continue;
+            if (adjy >= ENVIRO_SIZE/2 || adjy <= -ENVIRO_SIZE/2) continue;
             // key.clear();
              //key += to_string(adjx);
             // key += intToStr.at(adjx);///[adjx];
@@ -608,21 +620,21 @@ void hashStep(int i) {
             for (int j = 0; j < BucketSize; j++) {
                 compteCount += 1;
                 if (list[j] == -1) break;
-                Circle* c = &manager[list[j]];//(*list)[j];
-                if (manager[i].id == c->id) continue; //manager[i].x == c->x && manager[i].y == c->y
-                float dist = distance(manager[i].x, manager[i].y, c->x, c->y);
+                Circle* agent = &manager[list[j]];//(*list)[j];
+                if (manager[i].id == agent->id) continue; //manager[i].x == c->x && manager[i].y == c->y
+                float dist = distance(manager[i].x, manager[i].y, agent->x, agent->y);
                 if (dist > 0 && dist < d_h) {
                     //Collsion code goes here [Main issue: The time to collision (tt) is inaccurate and predicts a time that is too far!]
                     float rad = 2 * ARADIS;
                     //rad = rad * 1.05;
                     if (dist < 2 * ARADIS) {
-                        rad = 2 * ARADIS - dist;
+                        rad = rad - dist;
                     }
                     //bool coll = willCollide(&manager[i], &manager[j]);
-                    float wx = manager[j].x - manager[i].x;
-                    float wy = manager[j].y - manager[i].y;
-                    float vx = manager[i].dirX - manager[j].dirX;
-                    float vy = manager[i].dirY - manager[j].dirY;
+                    float wx = agent->x - manager[i].x;
+                    float wy = agent->y - manager[i].y;
+                    float vx = manager[i].dirX - agent->dirX;
+                    float vy = manager[i].dirY - agent->dirY;
                     //if(vx == 0 && wx == 0) vx += 5.1;
                     //if(vy == 0 && vy == 0) vy += 5.1;
                     float a = vx * vx + vy * vy;
@@ -646,11 +658,12 @@ void hashStep(int i) {
                 }
             }
         }
-    }
+    }/*
     if (fAvoidCtr > 0) {
         fAvoid_x = fAvoid_x / fAvoidCtr;
         fAvoid_y = fAvoid_y / fAvoidCtr;
     }
+    */
     double forceSum_x = f_goal_x + fAvoid_x;
     double forceSum_y = f_goal_y + fAvoid_y;
     //if (forceSum_x >= INFINITY) forceSum_x = max_force;
@@ -718,10 +731,11 @@ void update(int value) {
             //manager[i].y += stepY;
             if (favoid) {
                 manager[i].stepF(i);
-                if (manager[i].x > 500) manager[i].x = -499;
-                if (manager[i].x < -500) manager[i].x = 499;
-                if (manager[i].y > 500) manager[i].y = -499;
-                if (manager[i].y < -500) manager[i].y = 499;
+                float limit = (ENVIRO_SIZE / 2);
+                if (manager[i].x > limit) manager[i].x = -limit + 1;
+                if (manager[i].x < -limit) manager[i].x = limit - 1;
+                if (manager[i].y > limit) manager[i].y = -limit + 1;
+                if (manager[i].y < -limit) manager[i].y = limit - 1;
             }
 
             if (anim) {
@@ -773,6 +787,11 @@ void update(int value) {
                     }
                     if (used) continue;
                     for (int n = 0; n < BucketSize; n++) {
+                        //NEW
+                        if (spatialHash[Index][n] == manager[i].id) {
+                            break;
+                        }
+                        //NEW
                         if (spatialHash[Index][n] == -1) {
                             spatialHash[Index][n] = manager[i].id;
                             prev[adjCount] = Index;
@@ -787,10 +806,11 @@ void update(int value) {
         //Make sure agents are in bounds and update agents
         for (int i = 0; i < NUMOFAGENTS; i++) {
             manager[i].stepF(i);
-            if (manager[i].x > 500) manager[i].x = -499;
-            if (manager[i].x < -500) manager[i].x = 499;
-            if (manager[i].y > 500) manager[i].y = -499;
-            if (manager[i].y < -500) manager[i].y = 499;
+            float limit = (ENVIRO_SIZE / 2);
+            if (manager[i].x > limit) manager[i].x = -limit + 1;
+            if (manager[i].x < -limit) manager[i].x = limit - 1;
+            if (manager[i].y > limit) manager[i].y = -limit + 1;
+            if (manager[i].y < -limit) manager[i].y = limit - 1;
         }
         storLocs();
         //ClEAR ALL VALUES IN THE HASH!
