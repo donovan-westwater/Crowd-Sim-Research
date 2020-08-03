@@ -41,7 +41,8 @@ using namespace std;
 #define PI 3.14159265f
 #define ARADIS 0.5 //10
 #define TIME_STEP 0.25 // was 0.5
-#define NUMOFAGENTS 16 //300 
+#define NUMOFAGENTS 1//50//16 //300
+#define NUMOFOBSTACLES 1
 //bool circle = false;
 //bool quad = false;
 //bool mouse = false;
@@ -64,8 +65,17 @@ bool crowd = false;
 bool shash = false;
 bool favoid = false;
 bool fps = false;
+bool stats = false;
+//SCNEARIO ARGS
+bool basic = true;
+bool agent_circle = false;
+bool con_circle = false;
+bool agent_swap = false;
+bool crossFlow = false;
+bool wallTest = false;
 
 void draw_circle(float x, float  y, float z, bool atGoal);
+void draw_quad(float x, float y, float z);
 void step(int i);
 void hashStep(int i);
 
@@ -87,10 +97,28 @@ typedef struct Circle {
     void (*draw)(float x, float y, float z, bool atGoal) { draw_circle };
     void (*stepF)(int i) { step };
 };
+typedef struct Square {
+    int id; //Used for spatial hash
+    //coord cell = { -555, -555 }; //Used for Spatial Hash //was oringaly string
+    //coord adjcells[4] = { {-555, -555} ,{-555, -555} ,{-555, -555} ,{-555, -555} }; //Used for Spatial Hash //Was oringally string[4]
+    GLfloat x;
+    GLfloat y;
+    GLfloat z = 0;
+    GLfloat wid;
+    GLfloat length;
+    GLfloat goal_x;
+    GLfloat goal_y;
+    bool circleDrag = false;
+    bool isEmpty = true;
+    bool atGoal = false;
+    void (*draw)(float x, float y, float z) { draw_quad };
+    //void (*stepF)(int i) { step };
+};
 Circle manager[NUMOFAGENTS] = { 0 };
+Square obstacles[NUMOFOBSTACLES] = { 0 };
 
 #define ENVIRO_SIZE 50
-#define CELL_SIZE 2//25
+#define CELL_SIZE 1//2//25
 #define BucketSize 20
 #define width (ENVIRO_SIZE)/CELL_SIZE //(ENVIRO_SIZE/2) - -(ENVIRO_SIZE/2)
 int spatialHash[width * width][BucketSize];
@@ -102,6 +130,7 @@ int hashFun(float x, float y) {
     return out;
 }
 
+//Rewrite this to not just be a mess of ifs. I hate looking at this its like someone vomited garbage onto the computer
 void initGL() {
     /*
     if (mouse) {
@@ -132,9 +161,34 @@ void initGL() {
             manager[i].isEmpty = false;
         }
     }
+    //Doesnt do anything
     if (favoid) {
         for (int i = 0; i < NUMOFAGENTS; i++) {
-            //float ang = 2 * PI / NUMOFAGENTS;
+            manager[i].stepF = step;
+            manager[i].id = i;
+            manager[i].isEmpty = false;
+        }
+    }
+    if (fps) {
+        lasttime = time(NULL);
+    }
+    if (shash) {
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            manager[i].stepF = hashStep;
+            manager[i].id = i;
+            manager[i].isEmpty = false;
+            // manager[i].cell = { NULL,NULL };
+            // manager[i].adjcells[0] = { NULL,NULL };
+            // manager[i].adjcells[1] = { NULL,NULL };
+             //manager[i].adjcells[2] = { NULL,NULL };
+            // manager[i].adjcells[3] = { NULL,NULL };
+        }
+        memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
+
+    }
+    if (basic) {
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            if (!favoid && !shash) manager[i].stepF = step;
             manager[i].x = (float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //(float)(rand() % 1000) - 500; //(i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 5; 10*cos(ang*i);
             manager[i].y = (float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //(float)(rand() % 1000) - 500;//(i + 1) % 2 == 0 ? manager[i].y = 250 : manager[i].y = -150; 10*sin(ang * i);
             manager[i].dirX = 0;//(float)(rand() % 10) - 5;   //0;
@@ -143,54 +197,152 @@ void initGL() {
             manager[i].goal_y = (float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //(float)(rand() % 1000) - 500; //manager[i].dirY;
             manager[i].isEmpty = false;
             manager[i].id = i;
+
+            float limit = (ENVIRO_SIZE / 2);
+            if (manager[i].x > limit) manager[i].x = -limit + 1;
+            if (manager[i].x < -limit) manager[i].x = limit - 1;
+            if (manager[i].y > limit) manager[i].y = -limit + 1;
+            if (manager[i].y < -limit) manager[i].y = limit - 1;
+        }
+
+    }
+    else if (agent_circle) {
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            float ang = 2 * PI / NUMOFAGENTS;
+            if (!favoid && !shash) manager[i].stepF = step;
+            manager[i].x = 10 * cos(ang * i);//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); 
+            manager[i].y = 10 * sin(ang * i);//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); 
+            manager[i].dirX = 0; //i % 2 == 0 ? 1 : -1;
+            manager[i].dirY = 0; //i % 2 == 0 ? 1 : -1;
+            manager[i].goal_x = -manager[i].x;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+            manager[i].goal_y = -manager[i].y;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+
+            float limit = (ENVIRO_SIZE / 2);
+            if (manager[i].x > limit) manager[i].x = -limit + 1;
+            if (manager[i].x < -limit) manager[i].x = limit - 1;
+            if (manager[i].y > limit) manager[i].y = -limit + 1;
+            if (manager[i].y < -limit) manager[i].y = limit - 1;
         }
     }
-    if (fps) {
-        lasttime = time(NULL);
-    }
-    if (shash) {
+    else if (con_circle) {
+        float dist = 1;
+        int index = 1;
+        //float rotateCheck = 2*PI;
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            float halfAg = (NUMOFAGENTS / 2);
+            float ang = 2*PI/halfAg;
+            if (i % 2 == 0) {
+                dist = 2;
+                manager[i].goal_x = -5 * cos(ang * index);
+                manager[i].goal_y = -5 * sin(ang * index);
+                index++;
+            }
+            else {
+                dist = 1;
+                manager[i].goal_x = -5 *2* cos(ang * index);
+                manager[i].goal_y = -5 *2* sin(ang * index);
 
-        if (!favoid) {
-            for (int i = 0; i < NUMOFAGENTS; i++) {
-                float ang = 2 * PI / NUMOFAGENTS;
-                manager[i].x = 10 * cos(ang * i);//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); 
-                manager[i].y = 10 * sin(ang * i);//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); 
-                manager[i].dirX = 0; //i % 2 == 0 ? 1 : -1;
-                manager[i].dirY = 0; //i % 2 == 0 ? 1 : -1;
-                manager[i].goal_x = -manager[i].x;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
-                manager[i].goal_y = -manager[i].y;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
-                //if (abs(manager[i].dir_goal_x) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_x = -1 : manager[i].dir_goal_x = 1;
-                //if (abs(manager[i].dir_goal_y) < 1) (float)(rand() % 2) - 1 <= 0 ? manager[i].dir_goal_y = -1 : manager[i].dir_goal_y = 1;
-                manager[i].stepF = hashStep;
-                manager[i].id = i;
+            }
+            if (!favoid && !shash) manager[i].stepF = step;
+            manager[i].x = 5 *dist* cos(ang * index);//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); 
+            manager[i].y = 5 *dist* sin(ang * index);//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); 
+            manager[i].dirX = 0; //i % 2 == 0 ? 1 : -1;
+            manager[i].dirY = 0; //i % 2 == 0 ? 1 : -1;
+            //manager[i].goal_x = -manager[i].x;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+            //manager[i].goal_y = -manager[i].y;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+
+            float limit = (ENVIRO_SIZE / 2);
+            if (manager[i].x > limit) manager[i].x = -limit + 1;
+            if (manager[i].x < -limit) manager[i].x = limit - 1;
+            if (manager[i].y > limit) manager[i].y = -limit + 1;
+            if (manager[i].y < -limit) manager[i].y = limit - 1;
+        }
+    }
+    else if (agent_swap) {
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            if (!favoid && !shash) manager[i].stepF = step;
+            float ang = PI;
+            manager[i].x = 10 * cos(ang * i);
+            manager[i].y = 10 * sin(ang * i);
+            manager[i].dirX = 0; //i % 2 == 0 ? 1 : -1;
+            manager[i].dirY = 0; //i % 2 == 0 ? 1 : -1;
+            manager[i].goal_x = -manager[i].x;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+            manager[i].goal_y = -manager[i].y;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+
+            float limit = (ENVIRO_SIZE / 2);
+            if (manager[i].x > limit) manager[i].x = -limit + 1;
+            if (manager[i].x < -limit) manager[i].x = limit - 1;
+            if (manager[i].y > limit) manager[i].y = -limit + 1;
+            if (manager[i].y < -limit) manager[i].y = limit - 1;
+        }
+    }
+    //Placeholder
+    else if (wallTest) {
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            float ang = 2 * PI / NUMOFAGENTS;
+            if (!favoid && !shash) manager[i].stepF = step;
+            manager[i].x = 10 * cos(ang * i);
+            manager[i].y = 10 * sin(ang * i);
+            manager[i].dirX = 0; 
+            manager[i].dirY = 0; 
+            manager[i].goal_x = -manager[i].x;
+            manager[i].goal_y = -manager[i].y;
+        }
+        for (int i = 0; i < NUMOFOBSTACLES; i++) {
+            obstacles[i].x = 0;
+            obstacles[i].y = 0;
+            obstacles[i].wid = 10;
+            obstacles[i].length = 10;
+            obstacles[i].isEmpty = false;
+        }
+    }
+    //WIP
+    else if (crossFlow) {
+        int space = 1;
+        int row = 0;
+        for (int i = 0; i < NUMOFAGENTS; i++) {
+            if (!favoid && !shash) manager[i].stepF = step;
+            if (i % 2 == 0) {
+                manager[i].x = space*1.5;
+                manager[i].y = row*2+7;
+                manager[i].goal_x = manager[i].x;
+                manager[i].goal_y = -manager[i].y;;
+                space++;
+
                 float limit = (ENVIRO_SIZE / 2);
-                if (manager[i].x > limit) manager[i].x = -limit +1;
-                if (manager[i].x < -limit) manager[i].x = limit - 1;
-                if (manager[i].y > limit) manager[i].y = -limit + 1;
-                if (manager[i].y < -limit) manager[i].y = limit - 1;
-                // manager[i].cell = {NULL,NULL};
-                //manager[i].adjcells[0] = { NULL,NULL };
-                // manager[i].adjcells[1] = { NULL,NULL };
-                // manager[i].adjcells[2] = { NULL,NULL };
-                //manager[i].adjcells[3] = { NULL,NULL };
-                manager[i].isEmpty = false;
+                if (manager[i].goal_x > limit) manager[i].goal_x = -limit + 1;
+                if (manager[i].goal_x < -limit) manager[i].goal_x = limit - 1;
+                if (manager[i].goal_y > limit) manager[i].goal_y = -limit + 1;
+                if (manager[i].goal_y < -limit) manager[i].goal_y = limit - 1;
             }
-        }
-        else if (favoid) {
-            for (int i = 0; i < NUMOFAGENTS; i++) {
-                manager[i].stepF = hashStep;
-                manager[i].id = i;
-                // manager[i].cell = { NULL,NULL };
-                // manager[i].adjcells[0] = { NULL,NULL };
-                // manager[i].adjcells[1] = { NULL,NULL };
-                 //manager[i].adjcells[2] = { NULL,NULL };
-                // manager[i].adjcells[3] = { NULL,NULL };
-            }
-        }
-        memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
+            else {
+                manager[i].y = space * 1.5;
+                manager[i].x = row*2+7;
+                manager[i].goal_y = manager[i].y;
+                manager[i].goal_x = -manager[i].x;
 
+                float limit = (ENVIRO_SIZE / 2);
+                if (manager[i].goal_x > limit) manager[i].goal_x = -limit + 1;
+                if (manager[i].goal_x < -limit) manager[i].goal_x = limit - 1;
+                if (manager[i].goal_y > limit) manager[i].goal_y = -limit + 1;
+                if (manager[i].goal_y < -limit) manager[i].goal_y = limit - 1;
+            }
+            if (space % 5 == 0) {
+                row++;
+                space = 0;
+            }
+            manager[i].dirX = 0; //i % 2 == 0 ? 1 : -1;
+            manager[i].dirY = 0; //i % 2 == 0 ? 1 : -1;
+            //manager[i].goal_x = -manager[i].x;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+            //manager[i].goal_y = -manager[i].y;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
+
+            float limit = (ENVIRO_SIZE / 2);
+            if (manager[i].x > limit) manager[i].x = -limit + 1;
+            if (manager[i].x < -limit) manager[i].x = limit - 1;
+            if (manager[i].y > limit) manager[i].y = -limit + 1;
+            if (manager[i].y < -limit) manager[i].y = limit - 1;
+        }
     }
-
 }
 void mouseCordConvert(float x, float y, float* outX, float* outY) {
     GLint viewport[4];
@@ -283,10 +435,10 @@ void draw_quad(float x, float y, float z)
 {
 
     GLfloat points[] = {
-        x + 10.0f,y + 5.0f,0,
         x + 5.0f,y + 5.0f,0,
-        x + 5.0f,y + 10.0f,0,
-        x + 10.0f,y + 10.0f,0
+        x + 5.0f,y - 5.0f,0,
+        x - 5.0f,y - 5.0f,0,
+        x - 5.0f,y + 5.0f,0
     };
 
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -382,7 +534,11 @@ void display() {
         for (int i = 0; i < NUMOFAGENTS; i++) {
             if (manager[i].isEmpty) break;
             manager[i].draw(manager[i].x, manager[i].y, manager[i].z, manager[i].atGoal);
-            if (fps) display_stats(i);
+            if (stats) display_stats(i);
+        }
+        for (int i = 0; i < NUMOFOBSTACLES; i++) {
+            if (manager[i].isEmpty) break;
+            obstacles[i].draw(obstacles[i].x, obstacles[i].y, obstacles[i].z);
         }
         draw_grid();
     }
@@ -436,6 +592,7 @@ bool willCollide(Circle* a, Circle* b) {
     if (tau < 0)return false;
     else return true;
 }
+
 //GOAL: Implement social avoidence force model
 //This implmentation will ingore the friction force and the wall repulsion force
 //The big equation you see in the powerpoint (V(t)e(t)-V(t)/t) is just the force goal, so all we are 
@@ -457,11 +614,12 @@ void step(int i) {
     const float zeta = 0.54;//1.0023;
     const float max_force = 20; //1.5
     const float max_speed = 2;
-    const float prefSpeed = 1.5;
+    float prefSpeed = 1.5;
     const float timeStep = TIME_STEP / 10;
     float prefVeloX = manager[i].goal_x - manager[i].x;
     float prefVeloY = manager[i].goal_y - manager[i].y;
-    if (prefVeloX != 0 && prefVeloY != 0) {
+    if (prefVeloX != 0 || prefVeloY != 0) {
+        if (prefSpeed > max_speed) prefSpeed = max_speed;
         prefVeloX = prefSpeed * (prefVeloX / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
         prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
     }
@@ -520,6 +678,62 @@ void step(int i) {
             fAvoidCtr += 1;
         }
     }
+    //WIP
+    for (int j = 0; j < NUMOFOBSTACLES; j++) {
+        Square* curSquare = &obstacles[i];
+        float dist = distance(curSquare->x, curSquare->y, manager[i].x, manager[i].y);
+        float rad = 2*ARADIS;
+        if (dist > 0 && dist < d_h) {
+            float diffx = manager[i].x - curSquare->x;
+            float diffy = manager[i].y - curSquare->y;
+            float wid = curSquare->wid/ 2;
+            float len = curSquare->length/ 2;
+            //THIS AREA THAT ISNT WORKING
+            //Clamps the diff values to the bounds of the rectangle
+            if (diffx < -wid || diffx > wid){
+                diffx = max(-wid, min(diffx,  wid));
+            }
+            if (diffy < -len || diffy > len) {
+                diffy = max(-len, min(diffy, len));
+            }
+            //Stores the closest point to the circle
+            float closex = curSquare->x + diffx;
+            float closey = curSquare->y + diffy;
+            //rad += sqrtf(diffx * diffx + diffy * diffy);
+            //Gets the difference between the agent's center and the point
+            diffx = closex - manager[i].x;
+            diffy = closey - manager[i].y;
+            float closeDist = sqrtf(diffx * diffx + diffy * diffy);
+            if (sqrtf(diffx * diffx + diffy * diffy) < 2*ARADIS) {
+                rad = 2*ARADIS - sqrtf(diffx * diffx + diffy * diffy);
+                
+            }
+            float ovx = v_x;//v_x + v_x;
+            float ovy = v_y;//v_y + v_y;
+            const float a = ovx*ovx+ovy*ovy;
+            float owx = closex - manager[i].x;
+            float owy = closey - manager[i].y;
+            float b = owx*ovx+owy*ovy;
+            float c = (owx * owx + owy * owy) - (rad * rad);
+            float discr = b*b-a*c;
+            if (discr > 0 && (a < -0.00001f || a > 0.00001f)) {
+                discr = sqrtf(discr);
+                float tt = (b - discr) / a;
+                //tt /= 90000.0f;
+                if (tt > 0) {
+                    float part1 = -k * exp(-tt / t0);
+                    float part2 = (a * powf(tt, m));
+                    float part3 = (m / tt + 1 / t0);
+                    float part4 = (ovx - (b * ovx - a * owx) / discr);
+                    fAvoid_x += (-k * exp(-tt / t0) *(ovx-(b*ovx-a*owx)/discr)/(a*powf(tt,m))*(m/tt + 1/t0));
+                    fAvoid_y += (-k * exp(-tt / t0) *(ovy-(b*ovy-a*owy)/discr)/(a*powf(tt,m))*(m/tt + 1/t0));
+                }
+            }
+
+            //Collsion code stops here
+            fAvoidCtr += 1;
+        }
+    }
     if (fAvoidCtr > 0) {
         fAvoid_x = fAvoid_x / fAvoidCtr;
         fAvoid_y = fAvoid_y / fAvoidCtr;
@@ -557,8 +771,8 @@ void hashStep(int i) {
         //return;
         manager[i].dirX = 0;
         manager[i].dirY = 0;
-        manager[i].goal_x = manager[i].x;
-        manager[i].goal_y = manager[i].y;
+        //manager[i].goal_x = manager[i].x;
+        //manager[i].goal_y = manager[i].y;
     }
     const float d_h = 10;// *2 * ARADIS;
     double v_x = manager[i].dirX;
@@ -594,7 +808,7 @@ void hashStep(int i) {
     //int test2 = hashFun(X, Y);
     int* list;
     int hash;
-    int lookSize = d_h / CELL_SIZE;
+    int lookSize = 2;//d_h / CELL_SIZE;
     for (int x = -lookSize; x <= lookSize; x++) { //2
         for (int y = -lookSize; y <= lookSize; y++) { //2
             //if (x == 0 && y == 0)continue;
@@ -750,8 +964,8 @@ void update(int value) {
                 if (manager[i].y > 30.5) manager[i].y = -30.4;
                 if (manager[i].y < -30.5) manager[i].y = 30.4;
             }
-
         }
+        //storLocs();
     }
 
     //hash system here
@@ -812,7 +1026,7 @@ void update(int value) {
             if (manager[i].y > limit) manager[i].y = -limit + 1;
             if (manager[i].y < -limit) manager[i].y = limit - 1;
         }
-        storLocs();
+        //storLocs();
         //ClEAR ALL VALUES IN THE HASH!
         memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
     }
@@ -846,11 +1060,35 @@ int main(int argc, char** argv) {
         }
         if (strcmp("-fps", argv[i]) == 0) {
             fps = true;
-            favoid = true;
         }
         if (strcmp("-shash", argv[i]) == 0) {
             shash = true;
             fps = true;
+            //stats = true;
+        }
+        if (strcmp("-stats", argv[i]) == 0) {
+            stats = true;
+        }
+        
+        if (strcmp("-agent_circle", argv[i]) == 0) {
+            basic = false;
+            agent_circle = true;
+        }
+        else if (strcmp("-con_circle", argv[i]) == 0) {
+            basic = false;
+            con_circle = true;
+        }
+        else if (strcmp("-agent_swap", argv[i]) == 0) {
+            basic = false;
+            agent_swap = true;
+        }
+        else if (strcmp("-wallTest", argv[i]) == 0) {
+            basic = false;
+            wallTest = true;
+        }
+        else if (strcmp("-crossFlow", argv[i]) == 0) {
+            basic = false;
+            crossFlow = true;
         }
     }
     if (!shash && !fps && !favoid && !anim && !crowd) printf("No args found!\n");
