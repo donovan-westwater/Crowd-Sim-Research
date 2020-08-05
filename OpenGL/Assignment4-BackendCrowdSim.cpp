@@ -41,8 +41,8 @@ using namespace std;
 #define PI 3.14159265f
 #define ARADIS 0.5 //10
 #define TIME_STEP 0.25 // was 0.5
-#define NUMOFAGENTS 1//50//16 //300
-#define NUMOFOBSTACLES 1
+#define NUMOFAGENTS 300//50//16 //300
+#define NUMOFOBSTACLES 4
 //bool circle = false;
 //bool quad = false;
 //bool mouse = false;
@@ -74,8 +74,9 @@ bool agent_swap = false;
 bool crossFlow = false;
 bool wallTest = false;
 
+typedef struct Square;
 void draw_circle(float x, float  y, float z, bool atGoal);
-void draw_quad(float x, float y, float z);
+void draw_quad(Square *self,float x, float y, float z);
 void step(int i);
 void hashStep(int i);
 
@@ -111,7 +112,7 @@ typedef struct Square {
     bool circleDrag = false;
     bool isEmpty = true;
     bool atGoal = false;
-    void (*draw)(float x, float y, float z) { draw_quad };
+    void (*draw)(Square *self,float x, float y, float z) { draw_quad };
     //void (*stepF)(int i) { step };
 };
 Circle manager[NUMOFAGENTS] = { 0 };
@@ -262,8 +263,8 @@ void initGL() {
         for (int i = 0; i < NUMOFAGENTS; i++) {
             if (!favoid && !shash) manager[i].stepF = step;
             float ang = PI;
-            manager[i].x = 10 * cos(ang * i);
-            manager[i].y = 10 * sin(ang * i);
+            manager[i].x = i == 1 ? -10 : 10;//10 * cos(ang * i);
+            manager[i].y = 0;//10 * sin(ang * i);
             manager[i].dirX = 0; //i % 2 == 0 ? 1 : -1;
             manager[i].dirY = 0; //i % 2 == 0 ? 1 : -1;
             manager[i].goal_x = -manager[i].x;//(float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //i % 2 == 0 ? 1 : -1;
@@ -289,11 +290,35 @@ void initGL() {
             manager[i].goal_y = -manager[i].y;
         }
         for (int i = 0; i < NUMOFOBSTACLES; i++) {
-            obstacles[i].x = 0;
-            obstacles[i].y = 0;
-            obstacles[i].wid = 10;
-            obstacles[i].length = 10;
-            obstacles[i].isEmpty = false;
+            //if (obstacles[i].isEmpty) break;
+            if(i == 0){
+                obstacles[i].x = 0;
+                obstacles[i].y = 10;
+                obstacles[i].wid = 10;
+                obstacles[i].length = 2;
+                obstacles[i].isEmpty = false;
+            }
+            if (i == 1) {
+                obstacles[i].x = 0;
+                obstacles[i].y = -10;
+                obstacles[i].wid = 10;
+                obstacles[i].length = 2;
+                obstacles[i].isEmpty = false;
+            }
+            if (i == 2) {
+                obstacles[i].x = -5;
+                obstacles[i].y = 5;
+                obstacles[i].wid = 2;
+                obstacles[i].length = 10;
+                obstacles[i].isEmpty = false;
+            }
+            if (i == 3) {
+                obstacles[i].x = -5;
+                obstacles[i].y = -5;
+                obstacles[i].wid = 2;
+                obstacles[i].length = 10;
+                obstacles[i].isEmpty = false;
+            }
         }
     }
     //WIP
@@ -431,14 +456,22 @@ void display_stats(int id) {
         glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_10, (int)num[i]);
     }
 }
-void draw_quad(float x, float y, float z)
+void draw_quad(Square *self,float x, float y, float z)
 {
-
-    GLfloat points[] = {
+        /* 
+        GLfloat points[] = {
         x + 5.0f,y + 5.0f,0,
         x + 5.0f,y - 5.0f,0,
         x - 5.0f,y - 5.0f,0,
         x - 5.0f,y + 5.0f,0
+        };
+        */
+
+    GLfloat points[] = {
+        x + self->wid/2,y + self->length / 2,0,
+        x + self->wid / 2,y - self->length / 2,0,
+        x - self->wid / 2,y - self->length / 2,0,
+        x - self->wid / 2,y + self->length / 2,0
     };
 
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -537,8 +570,8 @@ void display() {
             if (stats) display_stats(i);
         }
         for (int i = 0; i < NUMOFOBSTACLES; i++) {
-            if (manager[i].isEmpty) break;
-            obstacles[i].draw(obstacles[i].x, obstacles[i].y, obstacles[i].z);
+            if (obstacles[i].isEmpty) break;
+            obstacles[i].draw(&obstacles[i],obstacles[i].x, obstacles[i].y, obstacles[i].z);
         }
         draw_grid();
     }
@@ -616,6 +649,15 @@ void step(int i) {
     const float max_speed = 2;
     float prefSpeed = 1.5;
     const float timeStep = TIME_STEP / 10;
+    //Making sure nothing is zero
+    int caster = manager[i].goal_x;
+    float rng = (((float)rand() / (RAND_MAX)) - 0.5) / 1000000;
+    if (caster == 0) manager[i].goal_x += rng;
+    caster = manager[i].goal_y;
+    rng = (((float)rand() / (RAND_MAX)) - 0.5) / 1000000;
+    if (caster == 0) manager[i].goal_y += rng;
+    //if (abs(manager[i].goal_x - 0.0) <= 0.0005) manager[i].goal_x += (rand() % 2 - 1) / 10000;
+    //if (abs(manager[i].goal_y - 0.0) <= 0.0005) manager[i].goal_y += (rand() % 2 - 1) / 10000;
     float prefVeloX = manager[i].goal_x - manager[i].x;
     float prefVeloY = manager[i].goal_y - manager[i].y;
     if (prefVeloX != 0 || prefVeloY != 0) {
@@ -680,30 +722,32 @@ void step(int i) {
     }
     //WIP
     for (int j = 0; j < NUMOFOBSTACLES; j++) {
+        if (obstacles[i].isEmpty) break;
         Square* curSquare = &obstacles[i];
         float dist = distance(curSquare->x, curSquare->y, manager[i].x, manager[i].y);
         float rad = 2*ARADIS;
-        if (dist > 0 && dist < d_h) {
-            float diffx = manager[i].x - curSquare->x;
-            float diffy = manager[i].y - curSquare->y;
-            float wid = curSquare->wid/ 2;
-            float len = curSquare->length/ 2;
-            //THIS AREA THAT ISNT WORKING
-            //Clamps the diff values to the bounds of the rectangle
-            if (diffx < -wid || diffx > wid){
-                diffx = max(-wid, min(diffx,  wid));
-            }
-            if (diffy < -len || diffy > len) {
-                diffy = max(-len, min(diffy, len));
-            }
-            //Stores the closest point to the circle
-            float closex = curSquare->x + diffx;
-            float closey = curSquare->y + diffy;
-            //rad += sqrtf(diffx * diffx + diffy * diffy);
-            //Gets the difference between the agent's center and the point
-            diffx = closex - manager[i].x;
-            diffy = closey - manager[i].y;
-            float closeDist = sqrtf(diffx * diffx + diffy * diffy);
+        
+        float diffx = manager[i].x - curSquare->x;
+        float diffy = manager[i].y - curSquare->y;
+        float wid = curSquare->wid/ 2;
+        float len = curSquare->length/ 2;
+        //THIS AREA THAT ISNT WORKING
+        //Clamps the diff values to the bounds of the rectangle
+        if (diffx < -wid || diffx > wid){
+            diffx = max(-wid, min(diffx,  wid));
+        }
+        if (diffy < -len || diffy > len) {
+            diffy = max(-len, min(diffy, len));
+        }
+        //Stores the closest point to the circle
+        float closex = curSquare->x + diffx;
+        float closey = curSquare->y + diffy;
+        //rad += sqrtf(diffx * diffx + diffy * diffy);
+        //Gets the difference between the agent's center and the point
+        diffx = closex - manager[i].x;
+        diffy = closey - manager[i].y;
+        float closeDist = sqrtf(diffx * diffx + diffy * diffy);
+        if(closeDist > 0 && closeDist < d_h) {
             if (sqrtf(diffx * diffx + diffy * diffy) < 2*ARADIS) {
                 rad = 2*ARADIS - sqrtf(diffx * diffx + diffy * diffy);
                 
@@ -1026,7 +1070,7 @@ void update(int value) {
             if (manager[i].y > limit) manager[i].y = -limit + 1;
             if (manager[i].y < -limit) manager[i].y = limit - 1;
         }
-        //storLocs();
+        storLocs();
         //ClEAR ALL VALUES IN THE HASH!
         memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
     }

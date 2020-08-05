@@ -37,7 +37,7 @@ public class AgentPlayer : MonoBehaviour
 
         backsim.StartInfo.WorkingDirectory = Application.dataPath + "/../OpenGL/";
         backsim.StartInfo.FileName = Application.dataPath + "/../OpenGL/OpenGL.exe";
-        backsim.StartInfo.Arguments = "-shash";
+        backsim.StartInfo.Arguments = "-shash -basic";
         backsim.StartInfo.UseShellExecute = true;
 
         
@@ -126,7 +126,24 @@ public class AgentPlayer : MonoBehaviour
             
         }
     }
-
+    public void ClickPause()
+    {
+        playmode = !playmode;
+    }
+    public void switchToScenario(string name)
+    {
+        backsim.Kill();
+        backsim.StartInfo.Arguments = "-shash -"+name;
+        backsim.Start();
+        while (!File.Exists("frames/frame1.txt")) Thread.Sleep(2000);
+        fnum = Directory.GetFiles("./frames").Length;
+        lines = File.ReadAllLines("frames/frame1.txt");
+        amount = lines.Length;
+        positions = new Vector3[amount];
+        agents = new GameObject[amount];
+        rewind.maxValue = fnum;
+        display.text = "Current frame of simulation: " + count;
+    }
     private void OnApplicationQuit()
     {
         backsim.Kill();
