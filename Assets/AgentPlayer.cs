@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http.Headers;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,7 +31,7 @@ public class AgentPlayer : MonoBehaviour
     public Text display;
     public Slider rewind;
     public Button pauseButton;
-
+    int modeSwitch = 1;
     Process backsim = new Process();
     void Start()
     {
@@ -168,13 +169,33 @@ public class AgentPlayer : MonoBehaviour
     public void switchVisual()
     {
         bool isActive;
-        for(int i = 0; i < amount; i++)
-        {
-            isActive = agents[i].transform.GetChild(0).gameObject.activeSelf;
-            agents[i].transform.GetChild(0).gameObject.SetActive(!isActive);
-            agents[i].transform.GetChild(1).gameObject.SetActive(!isActive);
-        }
+        switch (modeSwitch) {
+            case 1:
+                for(int i = 0; i < amount; i++)
+                {
+                    isActive = agents[i].transform.GetChild(0).gameObject.activeSelf;
+                    agents[i].transform.GetChild(0).gameObject.SetActive(!isActive);
+                    agents[i].transform.GetChild(1).gameObject.SetActive(!isActive);
+                }
+                modeSwitch++;
+                break;
+            case 2:
+                
+                for(int i = 0; i < amount; i++)
+                {
+                    isActive = agents[i].transform.GetChild(0).gameObject.activeSelf;
+                    agents[i].transform.GetChild(0).gameObject.SetActive(!isActive);
+                    agents[i].transform.GetChild(1).gameObject.SetActive(!isActive);
+                }
+                agents[0].GetComponent<AgentVisualizer>().setVisualMode(false);
+                modeSwitch++;
+                break;
+            case 3:
+                agents[0].GetComponent<AgentVisualizer>().setVisualMode(true);
+                modeSwitch = 1;
+                break;
     }
+}
     private void OnApplicationQuit()
     {
         backsim.Kill();
