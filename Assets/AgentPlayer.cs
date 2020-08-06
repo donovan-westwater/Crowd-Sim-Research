@@ -29,6 +29,7 @@ public class AgentPlayer : MonoBehaviour
     public GameObject prefab;
     public Text display;
     public Slider rewind;
+    public Button pauseButton;
 
     Process backsim = new Process();
     void Start()
@@ -57,6 +58,9 @@ public class AgentPlayer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        //if (!playmode) pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Play";
+        //else pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Stop";
+
         fnum = Directory.GetFiles("./frames").Length;
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
@@ -64,7 +68,11 @@ public class AgentPlayer : MonoBehaviour
         if (playmode) {
             rewind.value = count;
             timer += Time.deltaTime;
-            if (Input.GetKeyDown(KeyCode.Space)) playmode = false;
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                playmode = false;
+                pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Play";
+            }
             if (timer > 0.05f)
             {
                 timer = 0;
@@ -102,7 +110,11 @@ public class AgentPlayer : MonoBehaviour
             else rewind.value = count;
             if (Input.GetKey(KeyCode.LeftArrow)) count--;
             if (Input.GetKey(KeyCode.RightArrow)) count++;
-            if (Input.GetKeyDown(KeyCode.Space)) playmode = true;
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                playmode = true;
+                pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Stop";
+            }
             if (count < 1) count = 1;
             if (count > fnum) count = fnum;
             string filename = "frames/frame" + count + ".txt";
@@ -129,18 +141,27 @@ public class AgentPlayer : MonoBehaviour
     public void ClickPause()
     {
         playmode = !playmode;
+        if (!playmode) pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Play";
+        else pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Stop";
     }
     public void switchToScenario(string name)
     {
         backsim.Kill();
+        DirectoryInfo di = new DirectoryInfo("./frames");
+        foreach (FileInfo file in di.GetFiles())
+        {
+            file.Delete();
+        }
+
         backsim.StartInfo.Arguments = "-shash -"+name;
+
         backsim.Start();
         while (!File.Exists("frames/frame1.txt")) Thread.Sleep(2000);
         fnum = Directory.GetFiles("./frames").Length;
         lines = File.ReadAllLines("frames/frame1.txt");
         amount = lines.Length;
         positions = new Vector3[amount];
-        agents = new GameObject[amount];
+        //agents = new GameObject[amount];
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
     }
