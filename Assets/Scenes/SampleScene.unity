@@ -2787,7 +2787,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 732057341}
-        m_MethodName: ClickPause
+        m_MethodName: switchVisual
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -6103,6 +6103,16 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 2470785608961285545, guid: 0f3bdf369ea0cb546bc96a9db29f1b4c,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2470785608961285551, guid: 0f3bdf369ea0cb546bc96a9db29f1b4c,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 2470785608961285559, guid: 0f3bdf369ea0cb546bc96a9db29f1b4c,
         type: 3}
       propertyPath: m_Name
@@ -6172,6 +6182,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalScale.z
       value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 2470785608970776179, guid: 0f3bdf369ea0cb546bc96a9db29f1b4c,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3348141985593583737, guid: 0f3bdf369ea0cb546bc96a9db29f1b4c,
         type: 3}

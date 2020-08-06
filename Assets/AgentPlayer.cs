@@ -165,6 +165,16 @@ public class AgentPlayer : MonoBehaviour
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
     }
+    public void switchVisual()
+    {
+        bool isActive;
+        for(int i = 0; i < amount; i++)
+        {
+            isActive = agents[i].transform.GetChild(0).gameObject.activeSelf;
+            agents[i].transform.GetChild(0).gameObject.SetActive(!isActive);
+            agents[i].transform.GetChild(1).gameObject.SetActive(!isActive);
+        }
+    }
     private void OnApplicationQuit()
     {
         backsim.Kill();
