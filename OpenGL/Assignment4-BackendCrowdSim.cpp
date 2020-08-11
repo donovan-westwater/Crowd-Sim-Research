@@ -1,10 +1,3 @@
-/*
-Dono note: Dont worry about mouse vs world coords, your not interacting with anything for this assignment, so the math doesnt deal
-at all with transformations, so dont worry.
-I tested this version on my mac
-I compile with:
-cc -o opengl_mock openglglut.cpp -I/opt/local/include -lglfw -framework Cocoa -framework OpenGL -framework GLUT -framework Cocoa
-*/
 
 //#define _ITERATOR_DEBUG_LEVEL 0
 //#define _DEBUG_LT_PRED(pred, x, y)    pred(x, y)
@@ -37,42 +30,45 @@ cc -o opengl_mock openglglut.cpp -I/opt/local/include -lglfw -framework Cocoa -f
 
 using namespace std;
 
-#define ZFAR 1.0 //4.0
-#define PI 3.14159265f
-#define ARADIS 0.5 //10
-#define TIME_STEP 0.25 // was 0.5
-#define NUMOFAGENTS 300//50//16 //300
-#define NUMOFOBSTACLES 4
-//bool circle = false;
-//bool quad = false;
-//bool mouse = false;
-//time_t timer;
-int loopCount = 1;
-int compteCount = 0; // dw add
+#define ZFAR 1.0 //Controls z-axis, No longer relevant
+#define PI 3.14159265f //Estimation of PI
+#define ARADIS 0.5 //Old Radius: 10 This controls the agent's radius since all agents are circles
+#define TIME_STEP 0.25 // Old TIMESTEP 0.5 This controls how fast the agents move / distance agents move each update
+#define NUMOFAGENTS 300 //How many agents does the sim manage/ create
+#define NUMOFOBSTACLES 4 //How many obstacles does the sim manage/ create
+
+int loopCount = 1; //Debug variable, used to count how many times a for/while loop has looped
+int compteCount = 0; //Debug variable, used to count how many times has the sim looped on the whole
 
 //FPS
-float curTime = 0;
-double lasttime = 0;
-float totaltime = 0;
-float frames = 0;
-float curFps = 0;
-float fps_avg = 0;
-float updateTime = 0;
-float updateFrames = 0;
+//float curTime = 0; //Unused variable
+double lasttime = 0;    //Last time returned by time(null)
+float totaltime = 0;    //Time since sim has started
+float frames = 0;       //Total num of frames since sim as started
+float curFps = 0;       //the current fps of the frame
+float fps_avg = 0;      //The average fps of the sim since it ran
+float updateTime = 0;   //time between updates
+float updateFrames = 0; //frames between updates
 //ARGS
-bool anim = false;
-bool crowd = false;
-bool shash = false;
-bool favoid = false;
-bool fps = false;
-bool stats = false;
+bool anim = false;      //Animates some circles moving if true
+bool crowd = false;     //Animates a larger group of circles if true
+bool shash = false;     //Runs a scenario using the spatial hash version of collision dectection 
+bool favoid = false;    //Runs a scenario wthout using the spatial hash version of collision dectection
+bool fps = false;       //If true, displays FPS
+bool stats = false;     //If true, displays the ID, Direction of movment and current coords of the agents
 //SCNEARIO ARGS
-bool basic = true;
-bool agent_circle = false;
-bool con_circle = false;
-bool agent_swap = false;
-bool crossFlow = false;
-bool wallTest = false;
+bool basic = true;         //Scenario where all agents are randomly placed with randomized goals to head to
+bool agent_circle = false; //Scenario where all agents are placed in a circle and move to the opposite side
+bool con_circle = false;   //Scenario where all agents are placed in etheir an inner or outer cirlce and the move to swap postions with inner and outer
+bool agent_swap = false;   //Scenario where agents swap postions directly across from eachtother. WORKS ONLY WITH NUMOFAGENTS set to 2!
+bool crossFlow = false;    //Scenario where two clusters of agents move past eachother to the other side of the sim
+bool wallTest = false;     //Scenario meant to test collisions with walls 
+//COLLISION DECTION
+float k = 1.5;
+float t0 = 3.0000000; //2 - 4
+float m = 2;
+double fAvoid_x = 0;
+double fAvoid_y = 0;
 
 typedef struct Square;
 void draw_circle(float x, float  y, float z, bool atGoal);
@@ -82,48 +78,52 @@ void hashStep(int i);
 
 typedef pair<int, int> coord; //For hashmap
 typedef struct Circle {
-    int id; //Used for spatial hash
-    coord cell = { -555, -555 }; //Used for Spatial Hash //was oringaly string
-    coord adjcells[4] = { {-555, -555} ,{-555, -555} ,{-555, -555} ,{-555, -555} }; //Used for Spatial Hash //Was oringally string[4]
-    GLfloat x;
-    GLfloat y;
+    int id; //Unique ID of the Agent
+    //coord cell = { -555, -555 }; //Used for Spatial Hash //was oringaly string
+    //coord adjcells[4] = { {-555, -555} ,{-555, -555} ,{-555, -555} ,{-555, -555} }; //Used for Spatial Hash //Was oringally string[4]
+    GLfloat x; //X position of agent
+    GLfloat y; //Y position of agent
     GLfloat z = 0;
-    GLfloat dirX;
-    GLfloat dirY;
-    GLfloat goal_x;
-    GLfloat goal_y;
+    GLfloat dirX; //X velocity of agent
+    GLfloat dirY; //Y velocity of agent
+    GLfloat goal_x; //X goal position of agent
+    GLfloat goal_y; //Y goal position of agent
     bool circleDrag = false;
-    bool isEmpty = true;
-    bool atGoal = false;
-    void (*draw)(float x, float y, float z, bool atGoal) { draw_circle };
-    void (*stepF)(int i) { step };
+    bool isEmpty = true; //Determines if the obstacle is being used
+    bool atGoal = false; //Is the agent at their goal?
+    void (*draw)(float x, float y, float z, bool atGoal) { draw_circle }; //Pointer to the function that draws the agent
+    void (*stepF)(int i) { step }; //Pointer to the function that calculates collision avoidence
 };
 typedef struct Square {
     int id; //Used for spatial hash
     //coord cell = { -555, -555 }; //Used for Spatial Hash //was oringaly string
     //coord adjcells[4] = { {-555, -555} ,{-555, -555} ,{-555, -555} ,{-555, -555} }; //Used for Spatial Hash //Was oringally string[4]
-    GLfloat x;
-    GLfloat y;
+    GLfloat x; //X position of obstacle
+    GLfloat y; //Y position of obstacle
     GLfloat z = 0;
-    GLfloat wid;
-    GLfloat length;
-    GLfloat goal_x;
-    GLfloat goal_y;
+    GLfloat wid; //The Width of the obstacle
+    GLfloat length; //The Length of the obstacle
+    GLfloat goal_x; //Isn't used on obstacles
+    GLfloat goal_y; //Isn't used on obstacles
     bool circleDrag = false;
-    bool isEmpty = true;
-    bool atGoal = false;
-    void (*draw)(Square *self,float x, float y, float z) { draw_quad };
+    bool isEmpty = true; //Determines if the obstacle is being used
+    bool atGoal = false; //Not used on obstacles
+    void (*draw)(Square *self,float x, float y, float z) { draw_quad }; //Pointer to the function that draws the obstacle
     //void (*stepF)(int i) { step };
 };
-Circle manager[NUMOFAGENTS] = { 0 };
-Square obstacles[NUMOFOBSTACLES] = { 0 };
+Circle manager[NUMOFAGENTS] = { 0 };      //Stores all the agents in the sim
+Square obstacles[NUMOFOBSTACLES] = { 0 }; //Stores all the obstacles in the sim
 
-#define ENVIRO_SIZE 50
-#define CELL_SIZE 1//2//25
-#define BucketSize 20
-#define width (ENVIRO_SIZE)/CELL_SIZE //(ENVIRO_SIZE/2) - -(ENVIRO_SIZE/2)
+#define ENVIRO_SIZE 50 //Width and length of the enviroment
+#define CELL_SIZE 1//2//25 //Width and length of the cells used in spatial hash
+#define BucketSize 20 //How many agents can be stored in a bucket used in spatial hash 
+#define width (ENVIRO_SIZE)/CELL_SIZE //(ENVIRO_SIZE/2) - -(ENVIRO_SIZE/2) Controls how many spatial hash buckets there are
 int spatialHash[width * width][BucketSize];
-//Hash not correct atm WIP Create a HashSize that is width*width+width (to include the cell for 500)
+/*
+Description: returns the index of the bucket that corresponds to the cell that contains the coords given
+Params: the x and y coords 
+Return Index to a bucket corresponding to the cell with the coord inside it
+*/
 int hashFun(float x, float y) {
     int xpart = (int)(x / CELL_SIZE) * CELL_SIZE;
     int ypart = (int)(y / CELL_SIZE) * CELL_SIZE;
@@ -131,7 +131,12 @@ int hashFun(float x, float y) {
     return out;
 }
 
-//Rewrite this to not just be a mess of ifs. I hate looking at this its like someone vomited garbage onto the computer
+//Note from Donovan: I hope to rewrite this to be less of a mess of ifs
+/*
+Description: Initializes the scenario, collsion dectection, and FPS variables. Does this based on the flags turned on by command line input
+Params: None
+Return None
+*/
 void initGL() {
     /*
     if (mouse) {
@@ -162,8 +167,8 @@ void initGL() {
             manager[i].isEmpty = false;
         }
     }
-    //Doesnt do anything
-    if (favoid) {
+    
+    if (favoid) { //Normal step fucntion
         for (int i = 0; i < NUMOFAGENTS; i++) {
             manager[i].stepF = step;
             manager[i].id = i;
@@ -173,7 +178,7 @@ void initGL() {
     if (fps) {
         lasttime = time(NULL);
     }
-    if (shash) {
+    if (shash) { //Spatial hash step function
         for (int i = 0; i < NUMOFAGENTS; i++) {
             manager[i].stepF = hashStep;
             manager[i].id = i;
@@ -187,7 +192,7 @@ void initGL() {
         memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
 
     }
-    if (basic) {
+    if (basic) { //Default Scenario (See basic variable to description of this scneario)
         for (int i = 0; i < NUMOFAGENTS; i++) {
             if (!favoid && !shash) manager[i].stepF = step;
             manager[i].x = (float)(rand() % ENVIRO_SIZE) - (ENVIRO_SIZE / 2); //(float)(rand() % 1000) - 500; //(i + 1) % 2 == 0 ? manager[i].x = 0 : manager[i].x = 5; 10*cos(ang*i);
@@ -207,7 +212,7 @@ void initGL() {
         }
 
     }
-    else if (agent_circle) {
+    else if (agent_circle) { //Circle Scenario (See agent_circle variable to description of this scneario)
         for (int i = 0; i < NUMOFAGENTS; i++) {
             float ang = 2 * PI / NUMOFAGENTS;
             if (!favoid && !shash) manager[i].stepF = step;
@@ -225,7 +230,7 @@ void initGL() {
             if (manager[i].y < -limit) manager[i].y = limit - 1;
         }
     }
-    else if (con_circle) {
+    else if (con_circle) { //Concentric Circle Scenario (See con_circle variable to description of this scneario)
         float dist = 1;
         int index = 1;
         //float rotateCheck = 2*PI;
@@ -259,7 +264,7 @@ void initGL() {
             if (manager[i].y < -limit) manager[i].y = limit - 1;
         }
     }
-    else if (agent_swap) {
+    else if (agent_swap) { //Agents Swapping Positions Scenario (See agent_swap variable to description of this scneario)
         for (int i = 0; i < NUMOFAGENTS; i++) {
             if (!favoid && !shash) manager[i].stepF = step;
             float ang = PI;
@@ -278,7 +283,7 @@ void initGL() {
         }
     }
     //Placeholder
-    else if (wallTest) {
+    else if (wallTest) { //Scearnio that tests obstace collsion (See wallTest variable to description of this scneario)
         for (int i = 0; i < NUMOFAGENTS; i++) {
             float ang = 2 * PI / NUMOFAGENTS;
             if (!favoid && !shash) manager[i].stepF = step;
@@ -321,7 +326,7 @@ void initGL() {
             }
         }
     }
-    //WIP
+    //Agent Group Flow Scenario (See crossFlow variable to description of this scneario)
     else if (crossFlow) {
         int space = 1;
         int row = 0;
@@ -369,6 +374,7 @@ void initGL() {
         }
     }
 }
+//Ignore this: Not used in Sim
 void mouseCordConvert(float x, float y, float* outX, float* outY) {
     GLint viewport[4];
     GLdouble modelview[16];
@@ -392,6 +398,7 @@ void mouseCordConvert(float x, float y, float* outX, float* outY) {
     //emcpy(x, &posX, sizeof(float));
     // memcpy(y, &posY, sizeof(float));
 }
+//Ignore this: Not used in Sim
 void mouseFunc(int button, int buttonState, int x, int y) {
     //TODO
     for (int i = 0; i < NUMOFAGENTS; i++) {
@@ -413,7 +420,7 @@ void mouseFunc(int button, int buttonState, int x, int y) {
     }
 
 }
-
+//Ignore this: Not used in Sim
 void mouseDragFunc(int x, int y) {
     //TODO Sets the current postion of the circle to the mouse's current poistion in object space
 
@@ -428,7 +435,7 @@ void mouseDragFunc(int x, int y) {
     }
 }
 
-
+//Draws the agent based on their postion, changes their color when at Goal
 void draw_circle(float x, float  y, float z, bool atGoal) {
     GLfloat points[30];
     float angleStep = (PI / 180) * (360.0f / 10.0f);
@@ -446,6 +453,7 @@ void draw_circle(float x, float  y, float z, bool atGoal) {
     glDrawArrays(GL_LINE_LOOP, 0, 10);
     glDisableClientState(GL_VERTEX_ARRAY);
 }
+//Displays the ID, Velocity, and position of the agent
 void display_stats(int id) {
     char num[70];
     sprintf_s(num, "ID: %d Dir of X: %f Dir of Y: %f", id, manager[id].dirX, manager[id].dirY); //Var nameare
@@ -456,6 +464,7 @@ void display_stats(int id) {
         glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_10, (int)num[i]);
     }
 }
+//Draws the obstacle at its postion once give its x and y coords
 void draw_quad(Square *self,float x, float y, float z)
 {
         /* 
@@ -492,6 +501,7 @@ void draw_quad(Square *self,float x, float y, float z)
     glEnd();
     */
 }
+//Draws a grid to display all the cells in the sim. Called in FPS
 void draw_grid() {
     for (int x = -ENVIRO_SIZE / 2; x < ENVIRO_SIZE / 2; x += CELL_SIZE) {
         glBegin(GL_LINES);
@@ -509,7 +519,7 @@ void draw_grid() {
     }
     glColor3f(0, 0, 0);
 }
-// check https://www.khronos.org/opengl/wiki/Viewing_and_Transformations#How_do_I_implement_a_zoom_operation.3F
+// Camera for the sim. Automatically adjusted for window size
 void camera(float diam, float c_x, float c_y) {
     float zNear = 0.0;
     float zFar = zNear + diam;
@@ -604,9 +614,11 @@ void display() {
 
     glFlush();  // Render now
 }
+//Calculates the distance between two agents
 float distance(float x1, float y1, float  x2, float y2) {
     return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
+//Unused fucntion: determines wether or not to agents wound collide
 bool willCollide(Circle* a, Circle* b) {
     float radi = 2 * ARADIS;
     float wX = b->x - a->x;
@@ -626,11 +638,46 @@ bool willCollide(Circle* a, Circle* b) {
     else return true;
 }
 
+//Takes two agents and checks collsion againest them and stores output into favoid_x and favoid_y
+void collisionCheck(int i,int j,float rad) {
+    //Collsion code goes here [Main issue: The time to collision (tt) is inaccurate and predicts a time that is too far!]
+    float dist = distance(manager[i].x, manager[i].y, manager[j].x, manager[j].y);
+    //float rad = 2 * ARADIS;
+    //rad = rad * 1.05;
+    //if (dist < 2 * ARADIS) {
+    //    rad = 2 * ARADIS - dist;
+    //}
+    //bool coll = willCollide(&manager[i], &manager[j]);
+    float wx = manager[j].x - manager[i].x;
+    float wy = manager[j].y - manager[i].y;
+    float vx = manager[i].dirX - manager[j].dirX;
+    float vy = manager[i].dirY - manager[j].dirY;
+    //if(vx == 0 && wx == 0) vx += 5.1;
+    //if(vy == 0 && vy == 0) vy += 5.1;
+    float a = vx * vx + vy * vy;
+    float b = wx * vx + wy * vy;
+    float c = (wx * wx + wy * wy) - rad * rad;
+    float discr = b * b - a * c;
+    if (discr > 0 && (a < -0.00001f || a > 0.00001f)) {
+        discr = sqrtf(discr);
+        float tt = (b - discr) / a;
+        //tt /= 90000.0f;
+        if (tt > 0) {
+            float part1 = -k * exp(-tt / t0);
+            float part2 = (a * powf(tt, m));
+            float part3 = (m / tt + 1 / t0);
+            float part4 = (vx - (b * vx - a * wx) / discr);
+            fAvoid_x += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vx - (b * vx - a * wx) / discr);
+            fAvoid_y += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vy - (b * vy - a * wy) / discr);
+        }
+    }
+}
 //GOAL: Implement social avoidence force model
 //This implmentation will ingore the friction force and the wall repulsion force
 //The big equation you see in the powerpoint (V(t)e(t)-V(t)/t) is just the force goal, so all we are 
 //focusing on are the inter-agent forces (ignore kg(r-d)v't section of the equation, deals with friction)
 //Equation becomes: f = {Aexp(r-d/B)+Kg(r-d)}n
+//Checks if agent will collide with other agents and obstacles
 void step(int i) {
     float goalDist = distance(manager[i].x, manager[i].y, manager[i].goal_x, manager[i].goal_y);
     if (goalDist < 0.5) {
@@ -665,19 +712,20 @@ void step(int i) {
         prefVeloX = prefSpeed * (prefVeloX / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
         prefVeloY = prefSpeed * (prefVeloY / (sqrtf(prefVeloX * prefVeloX + prefVeloY * prefVeloY)));
     }
-    //Add coords for goal, and replace dir_goal with a vector to the goal
-    //Add a weight on how much goal and current veclotiy combine (10% goal 90% current for example)
+    
     float f_goal_x = (prefVeloX - v_x) / zeta;//0.9 * prefVeloX+ 0.1 * v_x; //(prefVeloX - v_x) / zeta; 0.2 * prefVeloX + 0.8 * v_x;
     float f_goal_y = (prefVeloY - v_y) / zeta;//0.9* prefVeloY + 0.1 * v_y;//(prefVeloY - v_y) / zeta; 0.2 * prefVeloY + 0.8 * v_y;
 
     float A = 2000;
     float B = 0.08;//0.08
-    float k = 1.5;
-    float k_frict = 0;//100;
-    float t0 = 3.0000000; //2 - 4
-    float m = 2;
-    double fAvoid_x = 0;
-    double fAvoid_y = 0;
+    //float k = 1.5;
+    //float k_frict = 0;//100;
+    //float t0 = 3.0000000; //2 - 4
+    //float m = 2;
+    //double fAvoid_x = 0;
+    //double fAvoid_y = 0;
+    fAvoid_x = 0;
+    fAvoid_y = 0;
     float fAvoidCtr = 0;
 
     for (int j = 0; j < NUMOFAGENTS; j++) {
@@ -685,12 +733,16 @@ void step(int i) {
         if (i == j) continue;
         float dist = distance(manager[i].x, manager[i].y, manager[j].x, manager[j].y);
         if (dist > 0 && dist < d_h) {
+            
             //Collsion code goes here [Main issue: The time to collision (tt) is inaccurate and predicts a time that is too far!]
+            
             float rad = 2 * ARADIS;
             //rad = rad * 1.05;
             if (dist < 2 * ARADIS) {
                 rad = 2 * ARADIS - dist;
             }
+            collisionCheck(i, j,rad);
+            /*
             //bool coll = willCollide(&manager[i], &manager[j]);
             float wx = manager[j].x - manager[i].x;
             float wy = manager[j].y - manager[i].y;
@@ -715,12 +767,12 @@ void step(int i) {
                     fAvoid_y += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vy - (b * vy - a * wy) / discr);
                 }
             }
-
+            */
             //Collsion code stops here
             fAvoidCtr += 1;
         }
     }
-    //WIP
+    //Controls collision dection with osbstacles
     for (int j = 0; j < NUMOFOBSTACLES; j++) {
         if (obstacles[i].isEmpty) break;
         Square* curSquare = &obstacles[i];
@@ -752,6 +804,8 @@ void step(int i) {
                 rad = 2*ARADIS - sqrtf(diffx * diffx + diffy * diffy);
                 
             }
+            collisionCheck(i, j,rad);
+            /*
             float ovx = v_x;//v_x + v_x;
             float ovy = v_y;//v_y + v_y;
             const float a = ovx*ovx+ovy*ovy;
@@ -773,7 +827,7 @@ void step(int i) {
                     fAvoid_y += (-k * exp(-tt / t0) *(ovy-(b*ovy-a*owy)/discr)/(a*powf(tt,m))*(m/tt + 1/t0));
                 }
             }
-
+            */
             //Collsion code stops here
             fAvoidCtr += 1;
         }
@@ -837,12 +891,14 @@ void hashStep(int i) {
     float f_goal_x = (prefVeloX - v_x) / zeta;
     float f_goal_y = (prefVeloY - v_y) / zeta;
     // if (manager[i].dir_goal_x > v_x) printf("ALERT!\n");
-    float k = 1.5;
-    float k_frict = 0;//100;
-    float t0 = 3.0000000; //2 - 4
-    float m = 2;
-    double fAvoid_x = 0;
-    double fAvoid_y = 0;
+    //float k = 1.5;
+    //float k_frict = 0;//100;
+    //float t0 = 3.0000000; //2 - 4
+    //float m = 2;
+    //double fAvoid_x = 0;
+    //double fAvoid_y = 0;
+    fAvoid_x = 0;
+    fAvoid_y = 0;
     float fAvoidCtr = 0;
     float interacting_agents = 0;
     //Getting lists of current and neighboring cells from hash
@@ -888,6 +944,8 @@ void hashStep(int i) {
                     if (dist < 2 * ARADIS) {
                         rad = rad - dist;
                     }
+                    collisionCheck(i, agent->id, rad);
+                    /*
                     //bool coll = willCollide(&manager[i], &manager[j]);
                     float wx = agent->x - manager[i].x;
                     float wy = agent->y - manager[i].y;
@@ -912,6 +970,7 @@ void hashStep(int i) {
                             fAvoid_y += (-k * exp(-tt / t0) / (a * powf(tt, m))) * (m / tt + 1 / t0) * (vy - (b * vy - a * wy) / discr);
                         }
                     }
+                    */
                     fAvoidCtr += 1;
                 }
             }
@@ -965,6 +1024,7 @@ void hashStep(int i) {
 
 
 }
+//Writes down the positions of all the agents onto a text file for use in the unity side of the sim
 void storLocs() {
     ofstream frame;
     string strFrames = to_string((int)frames);
@@ -977,6 +1037,7 @@ void storLocs() {
     frame.close();
 
 }
+
 void update(int value) {
     //TODO animation
     if (anim || crowd || favoid) {
@@ -1070,7 +1131,7 @@ void update(int value) {
             if (manager[i].y > limit) manager[i].y = -limit + 1;
             if (manager[i].y < -limit) manager[i].y = limit - 1;
         }
-        storLocs();
+        //storLocs();
         //ClEAR ALL VALUES IN THE HASH!
         memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
     }

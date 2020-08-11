@@ -18,6 +18,7 @@ public class AgentPlayer : MonoBehaviour
     *       * When there are no more files to read, stop the simulation
     * */
     Vector3[] positions;
+    const float height = 0.01f;
     float tempx = -1;
     float tempy = -1;
     int amount = 0;
@@ -86,7 +87,7 @@ public class AgentPlayer : MonoBehaviour
                     {
                         //if (i >= 50) continue;
                         string[] cords = lines[i].Split('|');
-                        positions[i] = new Vector3(float.Parse(cords[0]), 2, float.Parse(cords[1]));
+                        positions[i] = new Vector3(float.Parse(cords[0]), height, float.Parse(cords[1]));
                         if (!agents[i])
                         {
                             agents[i] = Instantiate(prefab);
