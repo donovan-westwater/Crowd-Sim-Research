@@ -26,9 +26,12 @@ public class AgentPlayer : MonoBehaviour
     float timer = 0;
     string[] lines;
     GameObject[] agents;
+    string[] wallFrame;
+    GameObject[] walls;
     bool playmode = true;
     int fnum = 0;
     public GameObject prefab;
+    public GameObject wall;
     public Text display;
     public Slider rewind;
     public Button pauseButton;
@@ -40,7 +43,7 @@ public class AgentPlayer : MonoBehaviour
 
         backsim.StartInfo.WorkingDirectory = Application.dataPath + "/../OpenGL/";
         backsim.StartInfo.FileName = Application.dataPath + "/../OpenGL/OpenGL.exe";
-        backsim.StartInfo.Arguments = "-shash -basic";
+        backsim.StartInfo.Arguments = "-shash -wallTest";
         backsim.StartInfo.UseShellExecute = true;
 
         
@@ -54,6 +57,7 @@ public class AgentPlayer : MonoBehaviour
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
 
+        SetupWalls();
         //backsim.Start();
     }
 
@@ -170,6 +174,29 @@ public class AgentPlayer : MonoBehaviour
     public void switchVisual()
     {
         bool isActive;
+        if(modeSwitch == 1)
+        {
+            for (int i = 0; i < amount; i++)
+            {
+                isActive = agents[i].transform.GetChild(0).gameObject.activeSelf;
+                agents[i].transform.GetChild(0).gameObject.SetActive(!isActive);
+                agents[i].transform.GetChild(1).gameObject.SetActive(!isActive);
+            }
+            agents[0].GetComponent<AgentVisualizer>().setVisualMode(true);
+            modeSwitch--;
+        }
+        else
+        {
+            for (int i = 0; i < amount; i++)
+            {
+                isActive = agents[i].transform.GetChild(0).gameObject.activeSelf;
+                agents[i].transform.GetChild(0).gameObject.SetActive(!isActive);
+                agents[i].transform.GetChild(1).gameObject.SetActive(!isActive);
+            }
+            agents[0].GetComponent<AgentVisualizer>().setVisualMode(false);
+            modeSwitch++;
+        }
+        /*
         switch (modeSwitch) {
             case 1:
                 for(int i = 0; i < amount; i++)
@@ -196,7 +223,28 @@ public class AgentPlayer : MonoBehaviour
                 modeSwitch = 1;
                 break;
     }
+    */
 }
+    void SetupWalls()
+    {
+        wallFrame = File.ReadAllLines("walls/frame1.txt");
+        string filename = "walls/frame1.txt";
+        int wallAmount = wallFrame.Length;
+        walls = new GameObject[wallAmount];
+        if (File.Exists(filename))
+        {
+            lines = File.ReadAllLines(filename);
+            for (int i = 0; i < wallAmount; i++)
+            {
+                walls[i] = Instantiate(wall);
+                string[] param = lines[i].Split('|');
+                walls[i].transform.position = new Vector3(float.Parse(param[0]), wall.transform.position.y, float.Parse(param[1]));
+                walls[i].transform.localScale = new Vector3(float.Parse(param[3]),walls[i].transform.localScale.y, float.Parse(param[2]));
+                
+            }
+            
+        }
+    }
     private void OnApplicationQuit()
     {
         backsim.Kill();

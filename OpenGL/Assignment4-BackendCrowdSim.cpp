@@ -285,6 +285,7 @@ void initGL() {
     //Placeholder
     else if (wallTest) { //Scearnio that tests obstace collsion (See wallTest variable to description of this scneario)
         for (int i = 0; i < NUMOFAGENTS; i++) {
+            continue; //remove once you want to add agents again
             float ang = 2 * PI / NUMOFAGENTS;
             if (!favoid && !shash) manager[i].stepF = step;
             manager[i].x = 10 * cos(ang * i);
@@ -1030,12 +1031,25 @@ void storLocs() {
     string strFrames = to_string((int)frames);
     frame.open("../frames/frame" + strFrames + ".txt");
     for (int i = 0; i < NUMOFAGENTS; i++) {
+        if (manager[i].isEmpty) break;
         string strX = to_string(manager[i].x);
         string strY = to_string(manager[i].y);
         frame << strX << "|" << strY << "\n";
     }
     frame.close();
-
+    //Wall storage (STORE WALLS IN SEPERATE FOLDER AND LOAD FROM THERE)
+    if(frames <= 1){
+        frame.open("../walls/frame" + strFrames + ".txt");
+        for (int i = 0; i < NUMOFOBSTACLES; i++) {
+            if (obstacles[i].isEmpty) break;
+            string strX = to_string(obstacles[i].x);
+            string strY = to_string(obstacles[i].y);
+            string len = to_string(obstacles[i].length);
+            string wid = to_string(obstacles[i].wid);
+            frame << strX << "|" << strY << "|" << len << "|"<< wid << "\n";
+        }
+        frame.close();
+    }
 }
 
 void update(int value) {
@@ -1131,7 +1145,7 @@ void update(int value) {
             if (manager[i].y > limit) manager[i].y = -limit + 1;
             if (manager[i].y < -limit) manager[i].y = limit - 1;
         }
-        //storLocs();
+        storLocs();
         //ClEAR ALL VALUES IN THE HASH!
         memset(spatialHash, -1, sizeof(int) * width * width * BucketSize);
     }

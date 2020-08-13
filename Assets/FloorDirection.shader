@@ -4,7 +4,7 @@
     {
         _BoundColor("Bound Color", Color) = (1,1,1,1)
         _BgColor("Background Color", Color) = (1,1,1,1)
-        _MainTex("Texture", 2D) = "red" {}
+        _MainTex("Texture", 2D) = "grey" {}
         _BoundWidth("BoundWidth", float) = 10
         _ComponentWidth("ComponentWidth", float) = 100
         _AgentPosX("AgentPosX", float) = 0.5

@@ -7,6 +7,7 @@ public class AgentVisualizer : MonoBehaviour
     // Start is called before the first frame update
    
     public Material circle;
+    public GameObject cylinder;
     public int id;
     static Vector4[] array = new Vector4[300];
     public static bool visualMode = true;
@@ -21,7 +22,11 @@ public class AgentVisualizer : MonoBehaviour
         array[id] = this.transform.position;
         //circle.SetFloat("_AgentPosX", this.transform.position.x);
         //circle.SetFloat("_AgentPosY", this.transform.position.z);
-        if(visualMode) circle.SetVectorArray("_aLocs", array);
+        if (visualMode)
+        {
+            //circle.SetVectorArray("_aLocs", array);
+            cylinder.SetActive(true);
+        }else cylinder.SetActive(false);
         //circle.SetVector("_aLocs" + id, new Vector3(this.transform.position.x,-1, this.transform.position.z));
     }
 
