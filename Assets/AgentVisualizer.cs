@@ -20,14 +20,14 @@ public class AgentVisualizer : MonoBehaviour
     void Update()
     {
         array[id] = this.transform.position;
-        //circle.SetFloat("_AgentPosX", this.transform.position.x);
-        //circle.SetFloat("_AgentPosY", this.transform.position.z);
+        
+        //Turns on cylinders of agents when visualMode is true
         if (visualMode)
         {
-            //circle.SetVectorArray("_aLocs", array);
+            
             cylinder.SetActive(true);
         }else cylinder.SetActive(false);
-        //circle.SetVector("_aLocs" + id, new Vector3(this.transform.position.x,-1, this.transform.position.z));
+       
     }
 
     public void setVisualMode(bool b)

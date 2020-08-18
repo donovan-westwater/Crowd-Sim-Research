@@ -6,7 +6,7 @@ using UnityEngine;
 public class HumanoidAdditions : MonoBehaviour
 {
     // Start is called before the first frame update
-    //public AgentFacing facing;
+    
     public Animator animator;
     Vector3 oldPos;
     Vector3 dir;
@@ -18,16 +18,16 @@ public class HumanoidAdditions : MonoBehaviour
     void Start()
     {
         oldPos = this.transform.position;
-        //facing = this.transform.GetComponent<AgentFacing>();
+        
         animator = this.transform.GetComponent<Animator>();
-        //dir = facing.aimRet.transform.position - this.transform.position;
-        //dir.y = 0;
+        
         angle = 0;
     }
 
     // Update is called once per frame
     void Update()
     {
+        //Controls the rotation of the agent
         dir = this.transform.position - oldPos;
         dir.y = 0;
         if(dir.magnitude >= 0.01f) { 
@@ -43,13 +43,12 @@ public class HumanoidAdditions : MonoBehaviour
                 angle -= angleTemp * Mathf.Rad2Deg;
             }
         }
-        //if (angle < -360 || angle > 360) angle = 0;
+        
         //Chnage the y part of hte euler angles to rotate the whole model
         //Get the angle by using the "true" north (find the vector for when rotaion y == 0)
         this.transform.eulerAngles = new Vector3(this.transform.eulerAngles.x, angle, this.transform.eulerAngles.z);
-        // this.transform.eulerAngles = new Vector3(this.transform.eulerAngles.x, 0, this.transform.eulerAngles.z);
-        //dir = new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle));
-        //dir.y = 0;
+        
+        //Controls which animation the model plays
         Vector3 speed = this.transform.position - oldPos;
         prevSpeeds[prevSpeedCounter] = speed.magnitude;
         prevSpeedCounter++;
@@ -76,7 +75,7 @@ public class HumanoidAdditions : MonoBehaviour
 
         avgSpeed += speed.magnitude;
         updateCount += 1;
-        //if (!Input.GetKey(KeyCode.D)) this.transform.position += new Vector3(1,0,0) * Time.deltaTime;
+        
     }
 
     private void OnApplicationQuit()

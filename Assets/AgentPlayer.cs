@@ -30,8 +30,8 @@ public class AgentPlayer : MonoBehaviour
     GameObject[] walls;
     bool playmode = true;
     int fnum = 0;
-    public GameObject prefab;
-    public GameObject wall;
+    public GameObject prefab; //Prefab for the agents
+    public GameObject wall;   //Prefab for the walls
     public Text display;
     public Slider rewind;
     public Button pauseButton;
@@ -39,6 +39,7 @@ public class AgentPlayer : MonoBehaviour
     Process backsim = new Process();
     void Start()
     {
+        //Gets the executable of the back end and runs it with the args in the Argments variable
         UnityEngine.Debug.Log(Application.dataPath);
 
         backsim.StartInfo.WorkingDirectory = Application.dataPath + "/../OpenGL/";
@@ -46,7 +47,7 @@ public class AgentPlayer : MonoBehaviour
         backsim.StartInfo.Arguments = "-shash -wallTest";
         backsim.StartInfo.UseShellExecute = true;
 
-        
+        //Runs EXE and waits for files to generate
         backsim.Start();
         while(!File.Exists("frames/frame1.txt")) Thread.Sleep(2000);
         fnum = Directory.GetFiles("./frames").Length;
@@ -57,6 +58,7 @@ public class AgentPlayer : MonoBehaviour
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
 
+        //SetsUp Walls from file
         SetupWalls();
         //backsim.Start();
     }
@@ -64,16 +66,17 @@ public class AgentPlayer : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //if (!playmode) pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Play";
-        //else pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Stop";
+        //Gets the current frame and displays
 
         fnum = Directory.GetFiles("./frames").Length;
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
-        //rewind.value = count;
+        
+        //When playing, gets values from the frame and copies the values from the file to agents
         if (playmode) {
             rewind.value = count;
             timer += Time.deltaTime;
+            //Jumps out of playmode and pauses the sim
             if (Input.GetKeyDown(KeyCode.Space))
             {
                 playmode = false;
@@ -89,7 +92,7 @@ public class AgentPlayer : MonoBehaviour
                     lines = File.ReadAllLines(filename);
                     for (int i = 0; i < amount; i++)
                     {
-                        //if (i >= 50) continue;
+                        //Splits up a line into an array and assigns the values to the agent
                         string[] cords = lines[i].Split('|');
                         positions[i] = new Vector3(float.Parse(cords[0]), height, float.Parse(cords[1]));
                         if (!agents[i])
@@ -106,14 +109,14 @@ public class AgentPlayer : MonoBehaviour
         }
         else //Code to rewind the simulation and look at previous postions of agents
         {
-            // display.text = "Current frame of simulation: " + count;
-            //rewind.value = count;
-
+            
+            //displays which frame the sim is on when scrubbing
             if (!Input.GetKey(KeyCode.LeftArrow) && !Input.GetKey(KeyCode.RightArrow) && !Input.GetKeyDown(KeyCode.Space))
             {
                 count = (int)rewind.value;
             }
             else rewind.value = count;
+            //Rewind controls
             if (Input.GetKey(KeyCode.LeftArrow)) count--;
             if (Input.GetKey(KeyCode.RightArrow)) count++;
             if (Input.GetKeyDown(KeyCode.Space))
@@ -124,6 +127,7 @@ public class AgentPlayer : MonoBehaviour
             if (count < 1) count = 1;
             if (count > fnum) count = fnum;
             string filename = "frames/frame" + count + ".txt";
+            //Moves all the agents based on the current frame
             if (File.Exists(filename))
             {
                 lines = File.ReadAllLines(filename);
@@ -144,12 +148,14 @@ public class AgentPlayer : MonoBehaviour
             
         }
     }
+    //Pauses the game with a button
     public void ClickPause()
     {
         playmode = !playmode;
         if (!playmode) pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Play";
         else pauseButton.transform.GetChild(0).transform.GetComponent<Text>().text = "Stop";
     }
+    //Restarts the game and intializes the scenario given
     public void switchToScenario(string name)
     {
         backsim.Kill();
@@ -171,6 +177,7 @@ public class AgentPlayer : MonoBehaviour
         rewind.maxValue = fnum;
         display.text = "Current frame of simulation: " + count;
     }
+    //Switches from models to Cylinders and vice verse
     public void switchVisual()
     {
         bool isActive;
@@ -196,35 +203,9 @@ public class AgentPlayer : MonoBehaviour
             agents[0].GetComponent<AgentVisualizer>().setVisualMode(false);
             modeSwitch++;
         }
-        /*
-        switch (modeSwitch) {
-            case 1:
-                for(int i = 0; i < amount; i++)
-                {
-                    isActive = agents[i].transform.GetChild(0).gameObject.activeSelf;
-                    agents[i].transform.GetChild(0).gameObject.SetActive(!isActive);
-                    agents[i].transform.GetChild(1).gameObject.SetActive(!isActive);
-                }
-                modeSwitch++;
-                break;
-            case 2:
-                
-                for(int i = 0; i < amount; i++)
-                {
-                    isActive = agents[i].transform.GetChild(0).gameObject.activeSelf;
-                    agents[i].transform.GetChild(0).gameObject.SetActive(!isActive);
-                    agents[i].transform.GetChild(1).gameObject.SetActive(!isActive);
-                }
-                agents[0].GetComponent<AgentVisualizer>().setVisualMode(false);
-                modeSwitch++;
-                break;
-            case 3:
-                agents[0].GetComponent<AgentVisualizer>().setVisualMode(true);
-                modeSwitch = 1;
-                break;
-    }
-    */
+        
 }
+    //Initializes the walls from the file in the walls folder
     void SetupWalls()
     {
         wallFrame = File.ReadAllLines("walls/frame1.txt");
@@ -245,6 +226,7 @@ public class AgentPlayer : MonoBehaviour
             
         }
     }
+    //When you stop the simulation, the backend is also killed and all frames are deleted
     private void OnApplicationQuit()
     {
         backsim.Kill();

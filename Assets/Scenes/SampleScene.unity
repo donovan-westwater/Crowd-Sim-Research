@@ -1277,6 +1277,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefab: {fileID: 2470785608961285559, guid: 0f3bdf369ea0cb546bc96a9db29f1b4c, type: 3}
+  wall: {fileID: 45240215628129323, guid: 3ab693c054c9d9b4389df9fa3b7b0db5, type: 3}
   display: {fileID: 1687243214}
   rewind: {fileID: 1962989376}
   pauseButton: {fileID: 1436542870}
