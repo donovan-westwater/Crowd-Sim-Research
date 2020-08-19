@@ -47,6 +47,7 @@ float fps_avg = 0;      //The average fps of the sim since it ran
 float updateTime = 0;   //time between updates
 float updateFrames = 0; //frames between updates
 //ARGS
+bool fileLoad = false;
 bool anim = false;      //Animates some circles moving if true
 bool crowd = false;     //Animates a larger group of circles if true
 bool shash = false;     //Runs a scenario using the spatial hash version of collision dectection 
@@ -133,13 +134,14 @@ Return None
 */
 void initGL() {
     
+    
    
     if (favoid) { //Normal step fucntion
         for (int i = 0; i < NUMOFAGENTS; i++) {
             //tells the agents to use the normal version of the step function and gives agents a unique ID
             manager[i].stepF = step;
             manager[i].id = i;
-            manager[i].isEmpty = false;
+            
         }
     }
     if (fps) { // Stores the time at the start of the sim for FPS calcuation
@@ -150,11 +152,70 @@ void initGL() {
             //tells the agents to use the spatial hash version of the step function and gives agents a unique ID
             manager[i].stepF = hashStep;
             manager[i].id = i;
-            manager[i].isEmpty = false;    
+               
         }
         memset(spatialHash, -1, sizeof(int) * width * width * BucketSize); //Clears the entire spatialHash
 
     }
+
+    if (fileLoad) {
+        //SCRAP AND USE IFSTREAM INSTEAD!!!!!!
+        char const* const agentFile = "./AgentLoader/Agents.txt"; /* should check that argc > 1 */
+        ifstream file;
+        char line[256];
+        float param[5];
+        //int index = 0;
+        file.open(agentFile, ifstream::in);
+        if (!file.fail()) {
+            while (file.getline(line, 256)) {
+                if (line[0] == '#') continue;
+
+                char* next = NULL;
+                char* t = strtok_s(line, " ", &next);
+                for (int i = 0; i < 5; i++) {
+                    param[i] = stof(t);
+                    t = strtok_s(NULL, " ", &next);
+                }
+                manager[(int)param[0]].id = (int)param[0];
+                manager[(int)param[0]].x = param[1];
+                manager[(int)param[0]].y = param[2];
+                manager[(int)param[0]].goal_x = param[3];
+                manager[(int)param[0]].goal_y = param[4];
+                manager[(int)param[0]].isEmpty = false;
+            }
+        }
+        else {
+            printf("Agent File failed to load\n");
+        }
+        file.close();
+
+        char const* const sceneFile = "./SceneLoader/Scene.txt";
+        file.open(sceneFile, ifstream::in);
+        if (!file.fail()) {
+            while (file.getline(line, 256)) {
+                if (line[0] == '#') continue;
+
+                char* next = NULL;
+                char* t = strtok_s(line, " ", &next);
+                for (int i = 0; i < 5; i++) {
+                    param[i] = stof(t);
+                    t = strtok_s(NULL, " ", &next);
+                }
+                obstacles[(int)param[0]].id = (int)param[0];
+                obstacles[(int)param[0]].x = param[1];
+                obstacles[(int)param[0]].y = param[2];
+                obstacles[(int)param[0]].wid = param[3];
+                obstacles[(int)param[0]].length = param[4];
+                obstacles[(int)param[0]].isEmpty = false;
+            }
+        }
+        else {
+            printf("Scene File failed to load\n");
+        }
+        file.close();
+
+    }
+
     if (basic) { //Default Scenario (See basic variable to description of this scneario)
         for (int i = 0; i < NUMOFAGENTS; i++) {
             //Defaults to normal step function if nothing it stated explictly
@@ -192,6 +253,7 @@ void initGL() {
             manager[i].dirY = 0; 
             manager[i].goal_x = -manager[i].x;
             manager[i].goal_y = -manager[i].y;
+            manager[i].isEmpty = false;
 
             //Makes sure the agents are placed in the simulation
             float limit = (ENVIRO_SIZE / 2);
@@ -227,6 +289,7 @@ void initGL() {
             manager[i].y = 5 *dist* sin(ang * index); 
             manager[i].dirX = 0; 
             manager[i].dirY = 0; 
+            manager[i].isEmpty = false;
             
             //Makes sure the agents are placed in the simulation
             float limit = (ENVIRO_SIZE / 2);
@@ -248,6 +311,7 @@ void initGL() {
             manager[i].dirY = 0; 
             manager[i].goal_x = -manager[i].x;
             manager[i].goal_y = -manager[i].y;
+            manager[i].isEmpty = false;
 
             //Makes sure the agents are placed in the simulation
             float limit = (ENVIRO_SIZE / 2);
@@ -271,6 +335,7 @@ void initGL() {
             manager[i].dirY = 0; 
             manager[i].goal_x = -manager[i].x;
             manager[i].goal_y = -manager[i].y;
+            manager[i].isEmpty = false;
         }
         for (int i = 0; i < NUMOFOBSTACLES; i++) {
             if(i == 0){
@@ -524,12 +589,12 @@ void display() {
     glClear(GL_COLOR_BUFFER_BIT);         // Clear the color buffer (background)
     if (anim || crowd || favoid || shash) {
         for (int i = 0; i < NUMOFAGENTS; i++) {
-            if (manager[i].isEmpty) break;
+            if (manager[i].isEmpty) continue;
             manager[i].draw(manager[i].x, manager[i].y, manager[i].z, manager[i].atGoal);
             if (stats) display_stats(i);
         }
         for (int i = 0; i < NUMOFOBSTACLES; i++) {
-            if (obstacles[i].isEmpty) break;
+            if (obstacles[i].isEmpty) continue;
             obstacles[i].draw(&obstacles[i],obstacles[i].x, obstacles[i].y, obstacles[i].z);
         }
         draw_grid();
@@ -687,7 +752,7 @@ void step(int i) {
     }
     //Controls collision dection with obstacles
     for (int j = 0; j < NUMOFOBSTACLES; j++) {
-        if (obstacles[i].isEmpty) break;
+        if (obstacles[i].isEmpty) continue;
         Square* curSquare = &obstacles[i];
         float dist = distance(curSquare->x, curSquare->y, manager[i].x, manager[i].y);
         float rad = 2*ARADIS;
@@ -889,7 +954,7 @@ void update(int value) {
     
     if (anim || crowd || favoid) {
         for (int i = 0; i < NUMOFAGENTS; i++) {
-            if (manager[i].isEmpty) break;
+            if (manager[i].isEmpty) continue;
             
             if (favoid) {
                 manager[i].stepF(i);
@@ -921,7 +986,7 @@ void update(int value) {
     if (shash) {
         //Create hashes for every agent in the sim
         for (int i = 0; i < NUMOFAGENTS; i++) {
-            if (manager[i].isEmpty) break;
+            if (manager[i].isEmpty) continue;
             int Index = hashFun(manager[i].x, manager[i].y);
             for (int n = 0; n < BucketSize; n++) {
                 if (spatialHash[Index][n] == -1) {
@@ -967,6 +1032,7 @@ void update(int value) {
         }
         //Make sure agents are in bounds and update agents
         for (int i = 0; i < NUMOFAGENTS; i++) {
+            if (manager[i].isEmpty) continue;
             manager[i].stepF(i);
             float limit = (ENVIRO_SIZE / 2);
             if (manager[i].x > limit) manager[i].x = -limit + 1;
@@ -987,6 +1053,11 @@ int main(int argc, char** argv) {
     //Add check for options here
     for (int i = 0; i < argc; i++) {
        
+        if (strcmp("-fileLoad", argv[i]) == 0) {
+            fileLoad = true;
+            basic = false;
+        }
+
         if (strcmp("-favoid", argv[i]) == 0) {
             favoid = true;
         }

@@ -1,0 +1,4 @@
+#AgentId xPos yPos xGoal yGoal (velocity is completly controled by agents)
+1 2.5 2.5 -2.5 -2.5
+0 1 1 -1 1
+3 0 0 3 3
