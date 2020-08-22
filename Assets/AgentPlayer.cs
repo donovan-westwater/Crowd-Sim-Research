@@ -30,7 +30,7 @@ public class AgentPlayer : MonoBehaviour
     GameObject[] walls;
     bool playmode = true;
     int fnum = 0;
-    public GameObject prefab; //Prefab for the agents
+    public GameObject agentPrefab; //agentPrefab for the agents
     public GameObject wall;   //Prefab for the walls
     public Text display;
     public Slider rewind;
@@ -97,7 +97,7 @@ public class AgentPlayer : MonoBehaviour
                         positions[i] = new Vector3(float.Parse(cords[0]), height, float.Parse(cords[1]));
                         if (!agents[i])
                         {
-                            agents[i] = Instantiate(prefab);
+                            agents[i] = Instantiate(agentPrefab);
                             agents[i].GetComponent<AgentVisualizer>().id = i;
                         }
                         agents[i].transform.position = positions[i];
@@ -138,7 +138,7 @@ public class AgentPlayer : MonoBehaviour
                     positions[i] = new Vector3(float.Parse(cords[0]), 2, float.Parse(cords[1]));
                     if (!agents[i])
                     {
-                        agents[i] = Instantiate(prefab);
+                        agents[i] = Instantiate(agentPrefab);
                         agents[i].GetComponent<AgentVisualizer>().id = i;
                     }
                     agents[i].transform.position = positions[i];

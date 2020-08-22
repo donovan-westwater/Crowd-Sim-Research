@@ -1519,7 +1519,6 @@ GameObject:
   - component: {fileID: 2470785608961704343}
   - component: {fileID: 2470785608970776179}
   - component: {fileID: 2724095142483222725}
-  - component: {fileID: 1616399097151811439}
   - component: {fileID: 5585496775996044319}
   m_Layer: 0
   m_Name: HumanoidAgent
@@ -1577,23 +1576,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 725776ea35a1bb44e9a0228106a97ba7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  circle: {fileID: 2100000, guid: a52f6f6c635ddcd49bc6cb4acd2ec51e, type: 2}
   cylinder: {fileID: 8167063527756105609}
   id: 0
---- !u!114 &1616399097151811439
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2470785608961285559}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b89d57fc0eecb514297088e0885c2166, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  aimRet: {fileID: 3348141985593583737}
-  facing: {x: 0, y: 0, z: 0}
 --- !u!114 &5585496775996044319
 MonoBehaviour:
   m_ObjectHideFlags: 0

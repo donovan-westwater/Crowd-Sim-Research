@@ -6,14 +6,16 @@ public class AgentVisualizer : MonoBehaviour
 {
     // Start is called before the first frame update
    
-    public Material circle;
+    Material circle;
     public GameObject cylinder;
     public int id;
     static Vector4[] array = new Vector4[300];
     public static bool visualMode = false;
     void Start()
     {
-        
+        if (id % 5 == 0) cylinder.GetComponent<Renderer>().material.SetColor("_Color", Color.red);
+        else if(id % 2 == 0) cylinder.GetComponent<Renderer>().material.SetColor("_Color", Color.blue);
+        else if(id % 3 == 0) cylinder.GetComponent<Renderer>().material.SetColor("_Color", Color.yellow);
     }
 
     // Update is called once per frame
@@ -40,7 +42,7 @@ public class AgentVisualizer : MonoBehaviour
             {
                 clear[i] = new Vector4(9999, 9999, 9999, 9999);
             }
-            circle.SetVectorArray("_aLocs", clear);
+            //circle.SetVectorArray("_aLocs", clear);
         }
     }
 }
