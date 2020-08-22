@@ -50,7 +50,7 @@ public class HumanoidAdditions : MonoBehaviour
         
         //Controls which animation the model plays
         Vector3 speed = this.transform.position - oldPos;
-        prevSpeeds[prevSpeedCounter] = speed.magnitude;
+        prevSpeeds[prevSpeedCounter] = speed.magnitude * 100;
         prevSpeedCounter++;
         if(prevSpeedCounter > 3)
         {
@@ -65,10 +65,10 @@ public class HumanoidAdditions : MonoBehaviour
             totalSpeeds += prevSpeeds[i];
         }
         float avgS = totalSpeeds / numOfSpeeds;
-        animator.SetFloat("speed", speed.magnitude);
+        animator.SetFloat("speed", speed.magnitude*100);
         bool idlemode = animator.GetBool("idlemode");
-        float curSpeed = speed.magnitude;
-        if (avgS <= 0) animator.SetBool("idlemode", true);
+        float curSpeed = (int)(speed.magnitude*100);
+        if (avgS <= 1) animator.SetBool("idlemode", true);
         else animator.SetBool("idlemode", false);
 
         oldPos = this.transform.position;

@@ -10,7 +10,7 @@ public class AgentVisualizer : MonoBehaviour
     public GameObject cylinder;
     public int id;
     static Vector4[] array = new Vector4[300];
-    public static bool visualMode = true;
+    public static bool visualMode = false;
     void Start()
     {
         

@@ -44,7 +44,7 @@ public class AgentPlayer : MonoBehaviour
 
         backsim.StartInfo.WorkingDirectory = Application.dataPath + "/../OpenGL/";
         backsim.StartInfo.FileName = Application.dataPath + "/../OpenGL/OpenGL.exe";
-        backsim.StartInfo.Arguments = "-shash -wallTest";
+        backsim.StartInfo.Arguments = "-shash -basic";
         backsim.StartInfo.UseShellExecute = true;
 
         //Runs EXE and waits for files to generate
