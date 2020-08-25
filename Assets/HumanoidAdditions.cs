@@ -7,13 +7,13 @@ public class HumanoidAdditions : MonoBehaviour
 {
     // Start is called before the first frame update
     
-    public Animator animator;
-    Vector3 oldPos;
-    Vector3 dir;
-    float angle;
+    public Animator animator; //Animator compoetnet of the agent
+    Vector3 oldPos; //Old position of the agent
+    Vector3 dir; //new facing of the agent
+    float angle; //angle of current facing
     int updateCount = 0;
-    float avgSpeed = 0;
-    float[] prevSpeeds = { -1, -1, -1,-1};
+    float avgSpeed = 0; //average speed of the agent
+    float[] prevSpeeds = { -1, -1, -1,-1}; //Array of previous speeds, used to make average speed
     int prevSpeedCounter = 0;
     void Start()
     {
@@ -49,7 +49,9 @@ public class HumanoidAdditions : MonoBehaviour
         this.transform.eulerAngles = new Vector3(this.transform.eulerAngles.x, angle, this.transform.eulerAngles.z);
         
         //Controls which animation the model plays
+        //Gets speed and then stores it * 100 to have better percision
         Vector3 speed = this.transform.position - oldPos;
+        //Stores the value as a previous speed, goes back to start when it counter goes past the max index
         prevSpeeds[prevSpeedCounter] = speed.magnitude * 100;
         prevSpeedCounter++;
         if(prevSpeedCounter > 3)
@@ -58,6 +60,7 @@ public class HumanoidAdditions : MonoBehaviour
         }
         float numOfSpeeds = 0;
         float totalSpeeds = 0;
+        //Averages the prvious speeds
         for(int i = 0; i < 4; i++)
         {
             if (prevSpeeds[i] == -1) continue;
@@ -65,6 +68,7 @@ public class HumanoidAdditions : MonoBehaviour
             totalSpeeds += prevSpeeds[i];
         }
         float avgS = totalSpeeds / numOfSpeeds;
+        //Sends speed to animator to evaluate
         animator.SetFloat("speed", speed.magnitude*100);
         bool idlemode = animator.GetBool("idlemode");
         float curSpeed = (int)(speed.magnitude*100);
@@ -77,7 +81,7 @@ public class HumanoidAdditions : MonoBehaviour
         updateCount += 1;
         
     }
-
+    //Prints the average speed of the agent overall when sim is closed
     private void OnApplicationQuit()
     {
         avgSpeed /= updateCount;

@@ -6,13 +6,14 @@ public class AgentVisualizer : MonoBehaviour
 {
     // Start is called before the first frame update
    
-    Material circle;
+    Material circle; //Unused
     public GameObject cylinder;
     public int id;
-    static Vector4[] array = new Vector4[300];
-    public static bool visualMode = false;
+    static Vector4[] array = new Vector4[300]; //Unused
+    public static bool visualMode = false; //Are the agents cylinders or models
     void Start()
     {
+        //Gives the agent's cylinders a color based on the id
         if (id % 5 == 0) cylinder.GetComponent<Renderer>().material.SetColor("_Color", Color.red);
         else if(id % 2 == 0) cylinder.GetComponent<Renderer>().material.SetColor("_Color", Color.blue);
         else if(id % 3 == 0) cylinder.GetComponent<Renderer>().material.SetColor("_Color", Color.yellow);
@@ -28,7 +29,7 @@ public class AgentVisualizer : MonoBehaviour
         {
             
             cylinder.SetActive(true);
-        }else cylinder.SetActive(false);
+        }else cylinder.SetActive(false); //Turns cylinders off when false
        
     }
 
