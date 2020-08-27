@@ -158,12 +158,13 @@ void initGL() {
 
     }
 
+    //Loads from the Agentloader and SceneLoader folders to make a cutsom scenaro
     if (fileLoad) {
         //SCRAP AND USE IFSTREAM INSTEAD!!!!!!
         char const* const agentFile = "./AgentLoader/Agents.txt"; /* should check that argc > 1 */
         ifstream file;
-        char line[256];
-        float param[5];
+        char line[256]; //Stores the line of a file
+        float param[5]; //Stores all the parameters needed to make agents/obstacles
         //int index = 0;
         file.open(agentFile, ifstream::in);
         if (!file.fail()) {
@@ -415,6 +416,7 @@ void initGL() {
             if (manager[i].x < -limit) manager[i].x = limit - 1;
             if (manager[i].y > limit) manager[i].y = -limit + 1;
             if (manager[i].y < -limit) manager[i].y = limit - 1;
+            manager[i].isEmpty = false;
         }
     }
 }

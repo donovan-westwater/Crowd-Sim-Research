@@ -18,7 +18,7 @@ public class AgentPlayer : MonoBehaviour
     *       * When there are no more files to read, stop the simulation
     * */
     Vector3[] positions; //Stores all the positions of the agents throughout the simulation
-    const float height = 0.01f; //the y-position of all the agents 
+    const float height = 0.001f; //the y-position of all the agents 
     
     int amount = 0; //The amount of agents in the simulation
     int count = 1;  //Represents the current frame
@@ -85,7 +85,7 @@ public class AgentPlayer : MonoBehaviour
             }
             if (timer > 0.05f)
             {
-                timer = 0;
+                timer = 0; //Used to get unity side to wait before using next file/frame
                 //Retrives a frame, starting with getting the file name
                 string filename = "frames/frame"+count+".txt";
                 if (File.Exists(filename))

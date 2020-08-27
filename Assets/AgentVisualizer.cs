@@ -38,6 +38,7 @@ public class AgentVisualizer : MonoBehaviour
         visualMode = b;
         if (!b)
         {
+            //Unused (Delete this section)
             Vector4[] clear = new Vector4[300];
             for (int i = 0; i < 300; i++)
             {

@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class HumanoidAdditions : MonoBehaviour
 {
-    // Start is called before the first frame update
+    // Handles Rotation of agent and animation of agent (Mainly for the model)
     
     public Animator animator; //Animator compoetnet of the agent
     Vector3 oldPos; //Old position of the agent
