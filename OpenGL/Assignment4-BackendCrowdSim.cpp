@@ -167,16 +167,20 @@ void initGL() {
         float param[5]; //Stores all the parameters needed to make agents/obstacles
         //int index = 0;
         file.open(agentFile, ifstream::in);
-        if (!file.fail()) {
+        if (!file.fail()) { //if file is open, continue, else move on
             while (file.getline(line, 256)) {
                 if (line[0] == '#') continue;
-
+                //# indicates a comment and ignores the line when reading
                 char* next = NULL;
                 char* t = strtok_s(line, " ", &next);
+                //stores the first param listed on the line
+
+                //Stores the frest of the params on the line of the file 
                 for (int i = 0; i < 5; i++) {
                     param[i] = stof(t);
                     t = strtok_s(NULL, " ", &next);
                 }
+                //Assigns saved params to their proper places in the agent
                 manager[(int)param[0]].id = (int)param[0];
                 manager[(int)param[0]].x = param[1];
                 manager[(int)param[0]].y = param[2];
@@ -192,6 +196,7 @@ void initGL() {
 
         char const* const sceneFile = "./SceneLoader/Scene.txt";
         file.open(sceneFile, ifstream::in);
+        //Repeats the process Above but with walls/obstacles instead of agents
         if (!file.fail()) {
             while (file.getline(line, 256)) {
                 if (line[0] == '#') continue;
@@ -202,6 +207,7 @@ void initGL() {
                     param[i] = stof(t);
                     t = strtok_s(NULL, " ", &next);
                 }
+                //Dir x and y are replaced with length and wid since it is an obstacle
                 obstacles[(int)param[0]].id = (int)param[0];
                 obstacles[(int)param[0]].x = param[1];
                 obstacles[(int)param[0]].y = param[2];
